@@ -3,37 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تسجيل الحضور</title>
+    <title>نظام الحضور الصارم</title>
+    
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         body { background: #0f172a; color: white; font-family: 'Cairo', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .card { background: rgba(255,255,255,0.95); color: #333; padding: 20px; border-radius: 20px; width: 90%; max-width: 350px; text-align: center; position: relative; }
+        .card { background: rgba(255,255,255,0.95); color: #1e293b; width: 90%; max-width: 400px; padding: 20px; border-radius: 20px; text-align: center; margin-top: 20px; position: relative; }
         
-        .cam-box { width: 260px; height: 260px; background: black; border-radius: 50%; margin: 20px auto; overflow: hidden; border: 5px solid #e2e8f0; position: relative; }
+        .cam-box { width: 260px; height: 260px; background: black; border-radius: 50%; margin: 20px auto; overflow: hidden; border: 5px solid #e2e8f0; position: relative; transition: border-color 0.2s; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        .overlay-timer { position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:80px; font-weight:bold; color:white; text-shadow: 0 0 10px black; z-index: 10; display: none; }
+        .overlay-timer { position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:100px; font-weight:900; color:white; text-shadow: 0 0 15px black; z-index: 10; display: none; }
         
-        .status-wait { border-color: #f59e0b; box-shadow: 0 0 25px #f59e0b; }
-        .status-ok { border-color: #10b981; box-shadow: 0 0 20px #10b981; }
-        .status-warn { border-color: #ef4444; box-shadow: 0 0 20px #ef4444; }
+        /* ألوان الحالة */
+        .status-error { border-color: #ef4444 !important; box-shadow: 0 0 30px #ef4444; }
+        .status-ok { border-color: #10b981 !important; box-shadow: 0 0 30px #10b981; }
         
+        /* رسالة الخطأ العائمة */
+        .alert-badge {
+            background: #ef4444; color: white; padding: 5px 15px; border-radius: 20px; 
+            font-size: 12px; font-weight: bold; position: absolute; top: 10px; left: 50%; 
+            transform: translateX(-50%); display: none; white-space: nowrap; z-index: 20;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
         input { width: 90%; padding: 12px; margin: 5px 0; border: 1px solid #ccc; border-radius: 10px; text-align: center; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #0ea5e9; color: white; border: none; border-radius: 10px; font-size: 18px; margin-top: 10px; cursor: pointer; }
         
         .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; }
         .modal { background:white; padding:20px; border-radius:15px; width:80%; max-width:300px; text-align:center; }
+        
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #0ea5e9; }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:40px;"></i>
-        <h3>جاري تحميل الذكاء الاصطناعي...</h3>
+        <i class="fa-solid fa-shield-halved fa-spin" style="font-size:50px;"></i>
+        <h3>جاري تحميل نظام الحماية...</h3>
     </div>
 
     <div class="modal-bg" id="modal">
@@ -47,8 +57,8 @@
     <div class="card">
         <h2 style="margin:0;">تسجيل الحضور</h2>
         <div id="form">
-            <input type="text" id="name" placeholder="الاسم">
-            <input type="number" id="uid" placeholder="ID">
+            <input type="text" id="name" placeholder="الاسم الثلاثي">
+            <input type="number" id="uid" placeholder="الرقم الجامعي (ID)">
             <button onclick="init()">ابدأ الكاميرا 📸</button>
         </div>
 
@@ -56,29 +66,35 @@
             <div class="cam-box" id="camBorder">
                 <video id="video" autoplay muted playsinline></video>
                 <div id="timer" class="overlay-timer">3</div>
+                <div id="alertBadge" class="alert-badge">⚠️ لا تتحرك!</div>
             </div>
-            <h3 id="status" style="color:#0ea5e9">...</h3>
+            <h3 id="status" style="color:#0ea5e9; font-size:16px;">...</h3>
         </div>
     </div>
 
     <audio id="beep" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+    <audio id="errSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
     <script>
-        // 🔴🔴 ضع الرابط الخاص بك هنا 🔴🔴
-        const API_URL = "https://script.google.com/macros/s/AKfycbxRuqCAmOENY4Iy4O4mDpjXUGfRB9i9QjvuS_fRlzV1S-KA-lWHX3AoTUGHI7NjkgKA/exec"; 
+        // 🔴🔴 رابط السكريبت 🔴🔴
+        const API_URL = "https://script.google.com/macros/s/AKfycbx36V1RMbbK_dPfFPJ_K63mmdqqZNoTD2oF3JIrwPealPnjv1p1EoOv9JZFgBGpTrLr/exec"; 
         
         const MODEL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        let userLat=0, userLng=0, bestDescriptor=null;
         const video = document.getElementById('video');
+        const alertBadge = document.getElementById('alertBadge');
+        
+        let userLat=0, userLng=0, bestDescriptor=null;
+        // متغيرات قياس الثبات
+        let lastNoseX = 0;
+        let lastNoseY = 0;
 
-        // 1. تحميل موديلات الوجه + موديلات التعابير (Expression)
         window.onload = async () => {
             try {
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL) // موديل كشف الضحك
+                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL) // ضروري للتعابير
                 ]);
                 document.getElementById('loader').style.display = 'none';
             } catch(e) { alert("خطأ في التحميل"); }
@@ -99,42 +115,54 @@
             document.getElementById('camArea').style.display = 'block';
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
             video.srcObject = stream;
-            document.getElementById('status').innerText = "😐 خليك طبيعي (بدون ضحك)";
-            startLogic();
+            document.getElementById('status').innerText = "اثبت مكانك تماماً";
+            startStrictLogic();
         }
 
-        function startLogic() {
+        function startStrictLogic() {
             let step = 0; // 0=Timer, 1=Left
             let count = 3;
             let counting = false;
             let timerInterval = null;
 
             const interval = setInterval(async () => {
-                // إضافة كشف التعابير (Expressions)
                 const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
                                          .withFaceLandmarks()
                                          .withFaceDescriptor()
-                                         .withFaceExpressions(); // كشف الضحك
+                                         .withFaceExpressions();
                 
                 if(det) {
                     const nose = det.landmarks.getNose()[0];
                     const jaw = det.landmarks.getJawOutline();
+                    
+                    // 1. قياس التمركز (Angle)
                     const ratio = Math.abs(nose.x - jaw[0].x) / Math.abs(nose.x - jaw[16].x);
                     
-                    // تحليل التعابير
+                    // 2. قياس التعابير (Expressions)
                     const expr = det.expressions;
-                    const isSmiling = expr.happy > 0.5;
-                    const isMouthOpen = expr.surprised > 0.5 || expr.angry > 0.5;
-                    const isNeutral = expr.neutral > 0.4 || (!isSmiling && !isMouthOpen);
+                    // يجب أن يكون "محايد" بنسبة عالية جداً (فوق 0.9) أو على الأقل ليس سعيداً
+                    const isPokerFace = expr.neutral > 0.8 || (expr.happy < 0.05 && expr.surprised < 0.05);
 
-                    // 1. مرحلة التايمر
+                    // 3. قياس الثبات (Stability - Movement Check)
+                    // نحسب الفرق بين مكان الأنف الآن ومكانه في اللقطة السابقة
+                    const moveDist = Math.sqrt(Math.pow(nose.x - lastNoseX, 2) + Math.pow(nose.y - lastNoseY, 2));
+                    
+                    // تحديث مكان الأنف للقطة القادمة
+                    lastNoseX = nose.x; 
+                    lastNoseY = nose.y;
+
+                    // هل الحركة عنيفة؟ (أكثر من 3 بكسل تعتبر حركة)
+                    const isStable = moveDist < 4; 
+
+                    // --- المرحلة 1: التثبيت الصارم ---
                     if(step === 0) {
-                        // الشرط: وجه أمامي + غير مبتسم + غير فاتح فمه
-                        if(ratio > 0.7 && ratio < 1.3 && isNeutral && !isSmiling) {
+                        // الشروط: (وجه بالمنتصف بدقة) + (وجه خالي من التعابير) + (ثبات تام)
+                        if(ratio > 0.8 && ratio < 1.2 && isPokerFace && isStable) {
                             
-                            document.getElementById('status').innerText = "👌 ممتاز.. اثبت";
-                            document.getElementById('status').style.color = "#10b981";
                             document.getElementById('camBorder').className = "cam-box status-ok";
+                            document.getElementById('status').innerText = "ممتاز.. خليك ثابت";
+                            document.getElementById('status').style.color = "#10b981";
+                            alertBadge.style.display = "none";
 
                             if(!counting) {
                                 counting = true;
@@ -144,10 +172,10 @@
                                     document.getElementById('timer').innerText = count;
                                     if(count <= 0) {
                                         clearInterval(timerInterval);
-                                        bestDescriptor = Array.from(det.descriptor); // 📸 التقاط
+                                        bestDescriptor = Array.from(det.descriptor);
                                         document.getElementById('timer').style.display = "none";
                                         step = 1;
-                                        document.getElementById('camBorder').className = "cam-box status-wait";
+                                        document.getElementById('camBorder').className = "cam-box";
                                         document.getElementById('status').innerText = "⬅️ الآن التفت لليسار";
                                         document.getElementById('status').style.color = "#f59e0b";
                                         document.getElementById('beep').play();
@@ -155,29 +183,35 @@
                                 }, 1000);
                             }
                         } else {
-                            // لو ضحك أو اتحرك -> وقف العد
+                            // ⛔ كشف المخالفة
                             if(counting) {
+                                // عقاب فوري: إعادة العداد للبداية
                                 clearInterval(timerInterval);
                                 counting = false;
                                 count = 3;
                                 document.getElementById('timer').innerText = "3";
                                 document.getElementById('timer').style.display = "none";
+                                document.getElementById('errSound').play().catch(()=>{});
                             }
 
-                            // رسائل التوجيه
-                            if(isSmiling) {
-                                document.getElementById('status').innerText = "😐 بدون ضحك من فضلك!";
-                                document.getElementById('status').style.color = "#ef4444";
-                                document.getElementById('camBorder').className = "cam-box status-warn";
-                            } else if(ratio <= 0.7 || ratio >= 1.3) {
-                                document.getElementById('status').innerText = "👀 انظر للكاميرا مباشرة";
-                                document.getElementById('status').style.color = "#0ea5e9";
-                                document.getElementById('camBorder').className = "cam-box";
+                            // تحديد سبب الرفض وعرضه
+                            document.getElementById('camBorder').className = "cam-box status-error";
+                            alertBadge.style.display = "block";
+                            
+                            if(!isStable) {
+                                alertBadge.innerText = "⚠️ لا تتحرك! اثبت";
+                                document.getElementById('status').innerText = "ممنوع الحركة";
+                            } else if(!isPokerFace) {
+                                alertBadge.innerText = "😐 بدون تعابير وجه!";
+                                document.getElementById('status').innerText = "اقفل فمك / بدون ضحك";
+                            } else {
+                                alertBadge.innerText = "👀 انظر للأمام مباشرة";
+                                document.getElementById('status').innerText = "اضبط وجهك في المنتصف";
                             }
                         }
                     }
                     
-                    // 2. مرحلة الالتفات
+                    // --- المرحلة 2: الالتفات لليسار ---
                     else if(step === 1) {
                         if(ratio < 0.5) {
                             clearInterval(interval);
@@ -187,7 +221,7 @@
                         }
                     }
                 }
-            }, 200);
+            }, 200); // فحص 5 مرات في الثانية
         }
 
         function send() {
@@ -203,7 +237,7 @@
                 const m = document.getElementById('modal');
                 const t = document.getElementById('mTitle');
                 m.style.display = 'flex';
-                t.innerText = d.status === 'success' ? "✅ تم" : "❌ تنبيه";
+                t.innerText = d.status === 'success' ? "✅ تم" : "❌ خطأ";
                 t.style.color = d.status === 'success' ? "green" : "red";
                 document.getElementById('mMsg').innerText = d.message;
             });
