@@ -2,131 +2,281 @@
 <html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام الحضور الصارم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>نظام الحضور الذكي - كلية التمريض</title>
     
-    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <meta property="og:title" content="جامعة الريادة - كلية التمريض">
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
     <style>
-        body { background: #0f172a; color: white; font-family: 'Cairo', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .card { background: rgba(255,255,255,0.95); color: #1e293b; width: 90%; max-width: 400px; padding: 20px; border-radius: 20px; text-align: center; margin-top: 20px; position: relative; }
+        /* === تصميمك الأصلي (لم يتم تغييره) === */
+        :root { --primary: #0ea5e9; --primary-dark: #0284c7; --text-main: #1e293b; --text-sub: #64748b; --glass-bg: rgba(255, 255, 255, 0.95); }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Cairo', sans-serif; min-height: 100vh; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background-color: #0f172a; position: relative; overflow: hidden; }
         
-        .cam-box { width: 260px; height: 260px; background: black; border-radius: 50%; margin: 20px auto; overflow: hidden; border: 5px solid #e2e8f0; position: relative; transition: border-color 0.2s; }
+        .bg-image { background: url('https://a.top4top.io/p_36115ao3o1.jpg') no-repeat center center; background-size: cover; filter: blur(12px) brightness(0.9); transform: scale(1.2); position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        
+        .app-card { background: var(--glass-bg); width: 90%; max-width: 400px; border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); text-align: center; position: relative; overflow: hidden; margin: 20px auto; border: 1px solid rgba(255,255,255,0.6); }
+        .card-banner { width: 100%; height: 120px; background: url('https://a.top4top.io/p_36115ao3o1.jpg') no-repeat center center; background-size: cover; }
+        .card-body { padding: 0 25px 30px 25px; position: relative; }
+        .hero-icon-wrapper { width: 100px; height: 100px; margin: -50px auto 15px auto; position: relative; border-radius: 50%; background: rgba(255,255,255,0.3); backdrop-filter: blur(10px); border: 3px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--primary); z-index: 10; }
+        
+        h1 { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 5px; }
+        p { font-size: 13px; color: var(--text-sub); margin-bottom: 20px; }
+
+        .section { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .section.active { display: block; opacity: 1; animation: fadeIn 0.5s; }
+
+        /* === إضافات الكاميرا (بنفس ستايلك) === */
+        .cam-container {
+            width: 260px; height: 260px; margin: 10px auto; border-radius: 50%; 
+            background: #000; overflow: hidden; border: 5px solid #e2e8f0; position: relative;
+            transition: all 0.3s;
+        }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        .overlay-timer { position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:100px; font-weight:900; color:white; text-shadow: 0 0 15px black; z-index: 10; display: none; }
-        
-        /* ألوان الحالة */
-        .status-error { border-color: #ef4444 !important; box-shadow: 0 0 30px #ef4444; }
-        .status-ok { border-color: #10b981 !important; box-shadow: 0 0 30px #10b981; }
-        
-        /* رسالة الخطأ العائمة */
-        .alert-badge {
-            background: #ef4444; color: white; padding: 5px 15px; border-radius: 20px; 
-            font-size: 12px; font-weight: bold; position: absolute; top: 10px; left: 50%; 
-            transform: translateX(-50%); display: none; white-space: nowrap; z-index: 20;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
+        .status-wait { border-color: #f59e0b; box-shadow: 0 0 25px #f59e0b; }
+        .status-ok { border-color: #10b981; box-shadow: 0 0 25px #10b981; }
+        .status-error { border-color: #ef4444; box-shadow: 0 0 25px #ef4444; }
 
-        input { width: 90%; padding: 12px; margin: 5px 0; border: 1px solid #ccc; border-radius: 10px; text-align: center; font-size: 16px; }
-        button { width: 100%; padding: 12px; background: #0ea5e9; color: white; border: none; border-radius: 10px; font-size: 18px; margin-top: 10px; cursor: pointer; }
+        .overlay-timer { position: absolute; top:0; left:0; width:100%; height:100%; display:none; align-items:center; justify-content:center; font-size:80px; font-weight:900; color:white; text-shadow: 0 0 10px black; z-index: 10; }
+        .alert-badge { background: #ef4444; color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: none; white-space: nowrap; z-index: 20; box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
+
+        .modern-input { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 15px; font-size: 18px; text-align: center; background: #f8fafc; font-weight: 700; outline: none; transition: 0.3s; }
+        .modern-input:focus { border-color: var(--primary); background: white; }
         
-        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; }
-        .modal { background:white; padding:20px; border-radius:15px; width:80%; max-width:300px; text-align:center; }
+        .btn-main { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; width: 100%; padding: 15px; border-radius: 18px; font-size: 16px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4); transition: 0.2s; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-main:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+
+        .custom-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; direction: ltr; }
+        .key-btn { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 0; font-size: 20px; font-weight: 700; color: #334155; cursor: pointer; transition: 0.1s; }
+        .key-btn:active { background: #f1f5f9; }
+        .key-btn.delete-btn { color: #ef4444; background: #fef2f2; }
+
+        .ticket-container { background: white; border-radius: 20px; border: 1px solid #f1f5f9; overflow: hidden; margin-top: 10px; }
+        .ticket-header { background: #10b981; padding: 15px; color: white; font-weight: bold; font-size: 16px; }
+        .ticket-body { padding: 20px; }
+        .t-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .t-label { color: #64748b; font-weight: bold; }
+        .t-value { font-weight: 800; color: #1e293b; }
+        .verified-badge { color: #10b981; border: 2px solid #10b981; padding: 5px 10px; border-radius: 8px; font-weight: 900; display: inline-block; margin-bottom: 10px; transform: rotate(-10deg); }
+
+        #desktop-blocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; color: #ef4444; z-index: 99999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        #loaderOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         
-        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #0ea5e9; }
+        .alert-box { background: #fef2f2; color: #ef4444; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 15px; display: none; border: 1px solid #fecaca; }
+
+        @keyframes fadeIn { from {opacity:0} to {opacity:1} }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <i class="fa-solid fa-shield-halved fa-spin" style="font-size:50px;"></i>
-        <h3>جاري تحميل نظام الحماية...</h3>
+    <div id="desktop-blocker">
+        <i class="fa-solid fa-mobile-screen-button" style="font-size:50px; margin-bottom:20px;"></i>
+        <h2>عذراً، للموبايل فقط</h2>
+        <p>يرجى فتح الرابط من هاتف ذكي.</p>
     </div>
 
-    <div class="modal-bg" id="modal">
-        <div class="modal">
-            <h2 id="mTitle"></h2>
-            <p id="mMsg"></p>
-            <button onclick="location.reload()">حسناً</button>
-        </div>
+    <div id="loaderOverlay">
+        <i class="fa-solid fa-shield-halved fa-spin" style="font-size:50px; color:#0ea5e9; margin-bottom:20px;"></i>
+        <h3 style="color:#1e293b">جاري تأمين النظام...</h3>
     </div>
 
-    <div class="card">
-        <h2 style="margin:0;">تسجيل الحضور</h2>
-        <div id="form">
-            <input type="text" id="name" placeholder="الاسم الثلاثي">
-            <input type="number" id="uid" placeholder="الرقم الجامعي (ID)">
-            <button onclick="init()">ابدأ الكاميرا 📸</button>
-        </div>
+    <div class="bg-image"></div>
 
-        <div id="camArea" style="display:none;">
-            <div class="cam-box" id="camBorder">
-                <video id="video" autoplay muted playsinline></video>
-                <div id="timer" class="overlay-timer">3</div>
-                <div id="alertBadge" class="alert-badge">⚠️ لا تتحرك!</div>
+    <div class="app-card">
+        <div class="card-banner"></div>
+        <div class="hero-icon-wrapper"><i class="fa-solid fa-user-graduate"></i></div>
+        
+        <div class="card-body">
+            
+            <div id="screenWelcome" class="section active">
+                <h1 style="color:#0ea5e9">نظام الحضور الذكي</h1>
+                <p>جامعة الريادة - كلية التمريض</p>
+                <button onclick="goToDataEntry()" class="btn-main">تسجيل الحضور <i class="fa-solid fa-arrow-left"></i></button>
             </div>
-            <h3 id="status" style="color:#0ea5e9; font-size:16px;">...</h3>
+
+            <div id="screenDataEntry" class="section">
+                <h1>أدخل الكود الجامعي</h1>
+                <p>اكتب رقمك التعريفي (ID)</p>
+                
+                <div id="idAlert" class="alert-box"></div>
+                <input type="text" id="uniID" class="modern-input" placeholder="-------" readonly>
+                
+                <div class="custom-keypad">
+                    <button class="key-btn" onclick="addKey('1')">1</button>
+                    <button class="key-btn" onclick="addKey('2')">2</button>
+                    <button class="key-btn" onclick="addKey('3')">3</button>
+                    <button class="key-btn" onclick="addKey('4')">4</button>
+                    <button class="key-btn" onclick="addKey('5')">5</button>
+                    <button class="key-btn" onclick="addKey('6')">6</button>
+                    <button class="key-btn" onclick="addKey('7')">7</button>
+                    <button class="key-btn" onclick="addKey('8')">8</button>
+                    <button class="key-btn" onclick="addKey('9')">9</button>
+                    <button class="key-btn action-btn" onclick="clearKey()">C</button>
+                    <button class="key-btn" onclick="addKey('0')">0</button>
+                    <button class="key-btn delete-btn" onclick="backspaceKey()"><i class="fa-solid fa-delete-left"></i></button>
+                </div>
+
+                <button onclick="startFaceFlow()" class="btn-main" style="margin-top:20px">التالي <i class="fa-solid fa-camera"></i></button>
+            </div>
+
+            <div id="screenFaceCheck" class="section">
+                <h1>التحقق الحيوي</h1>
+                <div class="cam-container" id="camBorder">
+                    <video id="video" autoplay muted playsinline></video>
+                    <div id="timer" class="overlay-timer">3</div>
+                    <div id="alertBadge" class="alert-badge">⚠️</div>
+                </div>
+                <h3 id="statusTxt" style="color:#0ea5e9; font-weight:bold; margin-top:10px;">جاري التشغيل...</h3>
+                <p style="font-size:12px; margin-top:5px;">يجب أن تكون داخل القاعة ووجهك ثابت</p>
+            </div>
+
+            <div id="screenSuccess" class="section">
+                <h1 style="color:#10b981">تم الحضور بنجاح</h1>
+                <div class="ticket-container">
+                    <div class="ticket-header"><i class="fa-solid fa-check-circle"></i> تم التوثيق</div>
+                    <div class="ticket-body">
+                        <div class="verified-badge">VERIFIED</div>
+                        <div class="t-row"><span class="t-label">الاسم</span><span class="t-value" id="resName">--</span></div>
+                        <div class="t-row"><span class="t-label">الرقم (ID)</span><span class="t-value" id="resID">--</span></div>
+                        <div class="ticket-dashed-line"></div>
+                        <div class="t-row"><span class="t-label">التاريخ</span><span class="t-value" id="resDate">--</span></div>
+                        <div class="t-row"><span class="t-label">الوقت</span><span class="t-value" id="resTime">--</span></div>
+                        <div class="t-row"><span class="t-label">المسافة</span><span class="t-value" id="resDist" style="color:#0ea5e9">--</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="screenError" class="section">
+                <h1 style="color:#ef4444">تنبيه</h1>
+                <div class="alert-box" id="errorMsg" style="display:block; font-size:14px;"></div>
+                <button onclick="location.reload()" class="btn-main" style="background:#334155;">حاول مرة أخرى</button>
+            </div>
+
         </div>
     </div>
 
     <audio id="beep" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
     <audio id="errSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+    <audio id="clickSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
 
     <script>
-        // 🔴🔴 رابط السكريبت 🔴🔴
-        const API_URL = "https://script.google.com/macros/s/AKfycbx36V1RMbbK_dPfFPJ_K63mmdqqZNoTD2oF3JIrwPealPnjv1p1EoOv9JZFgBGpTrLr/exec"; 
-        
-        const MODEL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        const video = document.getElementById('video');
-        const alertBadge = document.getElementById('alertBadge');
-        
-        let userLat=0, userLng=0, bestDescriptor=null;
-        // متغيرات قياس الثبات
-        let lastNoseX = 0;
-        let lastNoseY = 0;
-
-        window.onload = async () => {
-            try {
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL),
-                    faceapi.nets.faceExpressionNet.loadFromUri(MODEL) // ضروري للتعابير
-                ]);
-                document.getElementById('loader').style.display = 'none';
-            } catch(e) { alert("خطأ في التحميل"); }
+        // 🔴🔴 ضع رابط السكريبت الخاص بك هنا 🔴🔴
+        const CONFIG = {
+            sheetApiUrl: "https://script.google.com/macros/s/AKfycbxRuqCAmOENY4Iy4O4mDpjXUGfRB9i9QjvuS_fRlzV1S-KA-lWHX3AoTUGHI7NjkgKA/exec", 
+            modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
 
-        function init() {
-            if(!document.getElementById('name').value) return alert("أدخل البيانات");
-            if(navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(p => {
-                    userLat = p.coords.latitude; userLng = p.coords.longitude;
-                    startCam();
-                }, () => startCam(), {enableHighAccuracy:true});
-            } else startCam();
+        let studentsDB = {};
+        let userLat = "", userLng = "";
+        let bestDescriptor = null;
+        let lastNoseX = 0, lastNoseY = 0;
+        const video = document.getElementById('video');
+        const alertBadge = document.getElementById('alertBadge');
+
+        // 1. التحميل الأولي
+        window.onload = async () => {
+            if (!/android|iphone|ipad|ipod/i.test(navigator.userAgent) && !navigator.maxTouchPoints) {
+               document.getElementById('desktop-blocker').style.display = 'flex';
+               return; 
+            }
+
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(CONFIG.modelsUrl),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(CONFIG.modelsUrl),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.modelsUrl),
+                    faceapi.nets.faceExpressionNet.loadFromUri(CONFIG.modelsUrl)
+                ]);
+                document.getElementById('loaderOverlay').style.display = 'none';
+            } catch (e) {
+                alert("ضعف في الإنترنت، يرجى التحديث");
+            }
+        };
+
+        function switchScreen(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
         }
 
-        async function startCam() {
-            document.getElementById('form').style.display = 'none';
-            document.getElementById('camArea').style.display = 'block';
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            video.srcObject = stream;
-            document.getElementById('status').innerText = "اثبت مكانك تماماً";
-            startStrictLogic();
+        function goToDataEntry() {
+            document.getElementById('clickSound').play();
+            switchScreen('screenDataEntry');
         }
 
-        function startStrictLogic() {
+        // لوحة الأرقام
+        function addKey(n) { 
+            document.getElementById('clickSound').play();
+            const inp = document.getElementById('uniID');
+            if(inp.value.length < 15) inp.value += n;
+        }
+        function backspaceKey() { 
+            document.getElementById('clickSound').play();
+            const inp = document.getElementById('uniID');
+            inp.value = inp.value.slice(0, -1);
+        }
+        function clearKey() { 
+            document.getElementById('clickSound').play();
+            document.getElementById('uniID').value = '';
+        }
+
+        // --- بداية رحلة الوجه والموقع ---
+        async function startFaceFlow() {
+            const id = document.getElementById('uniID').value;
+            if (!id || id.length < 3) {
+                document.getElementById('idAlert').style.display = 'block';
+                document.getElementById('idAlert').innerText = "⚠️ أدخل كود صحيح";
+                return;
+            }
+
+            // طلب GPS
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    openCamera();
+                }, () => {
+                    alert("⚠️ يجب تفعيل الموقع لحساب النقطة المرجعية!");
+                    openCamera(); // يكمل لكن سيسجل المسافة خطأ
+                }, { enableHighAccuracy: true });
+            } else {
+                openCamera();
+            }
+        }
+
+        async function openCamera() {
+            switchScreen('screenFaceCheck');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                document.getElementById('statusTxt').innerText = "اثبت مكانك تماماً";
+                startStrictAI();
+            } catch (e) {
+                alert("الكاميرا محظورة!"); location.reload();
+            }
+        }
+
+        // --- الذكاء الاصطناعي الصارم ---
+        function startStrictAI() {
             let step = 0; // 0=Timer, 1=Left
             let count = 3;
             let counting = false;
             let timerInterval = null;
 
-            const interval = setInterval(async () => {
-                const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+            const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+
+            const loop = setInterval(async () => {
+                const det = await faceapi.detectSingleFace(video, options)
                                          .withFaceLandmarks()
                                          .withFaceDescriptor()
                                          .withFaceExpressions();
@@ -135,33 +285,22 @@
                     const nose = det.landmarks.getNose()[0];
                     const jaw = det.landmarks.getJawOutline();
                     
-                    // 1. قياس التمركز (Angle)
+                    // التمركز
                     const ratio = Math.abs(nose.x - jaw[0].x) / Math.abs(nose.x - jaw[16].x);
-                    
-                    // 2. قياس التعابير (Expressions)
+                    // التعابير
                     const expr = det.expressions;
-                    // يجب أن يكون "محايد" بنسبة عالية جداً (فوق 0.9) أو على الأقل ليس سعيداً
-                    const isPokerFace = expr.neutral > 0.8 || (expr.happy < 0.05 && expr.surprised < 0.05);
-
-                    // 3. قياس الثبات (Stability - Movement Check)
-                    // نحسب الفرق بين مكان الأنف الآن ومكانه في اللقطة السابقة
+                    const isStableFace = expr.neutral > 0.8 || (expr.happy < 0.1 && expr.surprised < 0.1);
+                    // الحركة
                     const moveDist = Math.sqrt(Math.pow(nose.x - lastNoseX, 2) + Math.pow(nose.y - lastNoseY, 2));
-                    
-                    // تحديث مكان الأنف للقطة القادمة
-                    lastNoseX = nose.x; 
-                    lastNoseY = nose.y;
+                    lastNoseX = nose.x; lastNoseY = nose.y;
+                    const isNotMoving = moveDist < 5; 
 
-                    // هل الحركة عنيفة؟ (أكثر من 3 بكسل تعتبر حركة)
-                    const isStable = moveDist < 4; 
-
-                    // --- المرحلة 1: التثبيت الصارم ---
+                    // 1. التثبيت والعد
                     if(step === 0) {
-                        // الشروط: (وجه بالمنتصف بدقة) + (وجه خالي من التعابير) + (ثبات تام)
-                        if(ratio > 0.8 && ratio < 1.2 && isPokerFace && isStable) {
-                            
-                            document.getElementById('camBorder').className = "cam-box status-ok";
-                            document.getElementById('status').innerText = "ممتاز.. خليك ثابت";
-                            document.getElementById('status').style.color = "#10b981";
+                        if(ratio > 0.8 && ratio < 1.2 && isStableFace && isNotMoving) {
+                            document.getElementById('camBorder').className = "cam-container status-ok";
+                            document.getElementById('statusTxt').innerText = "ممتاز.. خليك ثابت";
+                            document.getElementById('statusTxt').style.color = "#10b981";
                             alertBadge.style.display = "none";
 
                             if(!counting) {
@@ -172,76 +311,90 @@
                                     document.getElementById('timer').innerText = count;
                                     if(count <= 0) {
                                         clearInterval(timerInterval);
-                                        bestDescriptor = Array.from(det.descriptor);
+                                        bestDescriptor = Array.from(det.descriptor); // التقاط
                                         document.getElementById('timer').style.display = "none";
                                         step = 1;
-                                        document.getElementById('camBorder').className = "cam-box";
-                                        document.getElementById('status').innerText = "⬅️ الآن التفت لليسار";
-                                        document.getElementById('status').style.color = "#f59e0b";
+                                        document.getElementById('camBorder').className = "cam-container";
+                                        document.getElementById('statusTxt').innerText = "⬅️ الآن التفت لليسار";
+                                        document.getElementById('statusTxt').style.color = "#f59e0b";
                                         document.getElementById('beep').play();
                                     }
                                 }, 1000);
                             }
                         } else {
-                            // ⛔ كشف المخالفة
                             if(counting) {
-                                // عقاب فوري: إعادة العداد للبداية
                                 clearInterval(timerInterval);
                                 counting = false;
                                 count = 3;
                                 document.getElementById('timer').innerText = "3";
                                 document.getElementById('timer').style.display = "none";
-                                document.getElementById('errSound').play().catch(()=>{});
+                                document.getElementById('errSound').play();
                             }
-
-                            // تحديد سبب الرفض وعرضه
-                            document.getElementById('camBorder').className = "cam-box status-error";
+                            document.getElementById('camBorder').className = "cam-container status-error";
                             alertBadge.style.display = "block";
-                            
-                            if(!isStable) {
-                                alertBadge.innerText = "⚠️ لا تتحرك! اثبت";
-                                document.getElementById('status').innerText = "ممنوع الحركة";
-                            } else if(!isPokerFace) {
-                                alertBadge.innerText = "😐 بدون تعابير وجه!";
-                                document.getElementById('status').innerText = "اقفل فمك / بدون ضحك";
-                            } else {
-                                alertBadge.innerText = "👀 انظر للأمام مباشرة";
-                                document.getElementById('status').innerText = "اضبط وجهك في المنتصف";
-                            }
+                            if(!isNotMoving) alertBadge.innerText = "⚠️ لا تتحرك!";
+                            else if(!isStableFace) alertBadge.innerText = "😐 بدون تعابير!";
+                            else alertBadge.innerText = "👀 انظر للأمام";
                         }
                     }
                     
-                    // --- المرحلة 2: الالتفات لليسار ---
+                    // 2. الالتفات
                     else if(step === 1) {
                         if(ratio < 0.5) {
-                            clearInterval(interval);
-                            document.getElementById('camBorder').className = "cam-box status-ok";
-                            document.getElementById('status').innerText = "✅ جاري الإرسال...";
-                            send();
+                            clearInterval(loop);
+                            document.getElementById('camBorder').className = "cam-container status-ok";
+                            document.getElementById('statusTxt').innerText = "✅ جاري الإرسال...";
+                            sendData();
                         }
                     }
                 }
-            }, 200); // فحص 5 مرات في الثانية
+            }, 500);
         }
 
-        function send() {
+        function sendData() {
+            const id = document.getElementById('uniID').value;
+            // لو مفيش اسم في قاعدة البيانات نبعت ID مؤقتاً
+            const name = studentsDB[id] || "طالب"; 
+
             const payload = {
-                id: document.getElementById('uid').value,
-                name: document.getElementById('name').value,
+                id: id,
+                name: name,
                 vector: bestDescriptor,
                 lat: userLat, lng: userLng
             };
-            fetch(API_URL, { method: "POST", body: JSON.stringify(payload) })
+
+            fetch(CONFIG.sheetApiUrl, { method: "POST", body: JSON.stringify(payload) })
             .then(r => r.json())
-            .then(d => {
-                const m = document.getElementById('modal');
-                const t = document.getElementById('mTitle');
-                m.style.display = 'flex';
-                t.innerText = d.status === 'success' ? "✅ تم" : "❌ خطأ";
-                t.style.color = d.status === 'success' ? "green" : "red";
-                document.getElementById('mMsg').innerText = d.message;
+            .then(data => {
+                if(data.status === 'success') {
+                    // عرض التذكرة
+                    document.getElementById('resName').innerText = name;
+                    document.getElementById('resID').innerText = id;
+                    // استخراج المسافة من الرسالة (اختياري للعرض)
+                    const distMatch = data.message.match(/المسافة: (\d+)م/);
+                    const distDisplay = distMatch ? distMatch[1] + " متر" : "غير محدد";
+                    document.getElementById('resDist').innerText = distDisplay;
+
+                    document.getElementById('resDate').innerText = new Date().toLocaleDateString('ar-EG');
+                    document.getElementById('resTime').innerText = new Date().toLocaleTimeString('ar-EG');
+                    
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    document.getElementById('successSound').play();
+                    switchScreen('screenSuccess');
+                } else {
+                    document.getElementById('errorMsg').innerText = data.message;
+                    document.getElementById('errSound').play();
+                    switchScreen('screenError');
+                }
+            })
+            .catch(e => {
+                document.getElementById('errorMsg').innerText = "خطأ في الاتصال بالسيرفر";
+                switchScreen('screenError');
             });
         }
+
+        // منع النقر الأيمن
+        document.addEventListener('contextmenu', event => event.preventDefault());
     </script>
 </body>
 </html>
