@@ -5,179 +5,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام الحضور الذكي</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
     <style>
-        :root { --primary: #0ea5e9; --primary-dark: #0284c7; --glass: rgba(255, 255, 255, 0.95); }
-        body {
-            margin: 0; padding: 0; min-height: 100vh; font-family: 'Cairo', sans-serif;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: #0f172a;
-            background-image: url('https://a.top4top.io/p_36115ao3o1.jpg');
-            background-size: cover; background-blend-mode: overlay;
-        }
-
-        .main-card {
-            background: var(--glass); width: 90%; max-width: 400px;
-            border-radius: 30px; padding: 30px 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center;
-            position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.5);
-        }
-
-        h1 { color: #1e293b; font-weight: 900; margin: 10px 0; font-size: 22px; }
-        p { color: #64748b; font-size: 13px; margin-bottom: 20px; font-weight: 600; }
+        body { font-family: 'Cairo', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: rgba(255,255,255,0.95); color: #1e293b; width: 90%; max-width: 400px; padding: 20px; border-radius: 20px; text-align: center; margin-top: 20px; }
+        input { width: 90%; padding: 12px; margin: 8px 0; border: 2px solid #e2e8f0; border-radius: 10px; text-align: center; font-size: 16px; }
+        button { width: 100%; padding: 15px; background: #0ea5e9; color: white; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         
-        /* تصميم الكاميرا */
-        .camera-wrapper {
-            width: 260px; height: 260px; margin: 20px auto;
-            border-radius: 50%; border: 5px solid #e2e8f0;
-            position: relative; overflow: hidden; background: #000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: all 0.3s;
-        }
-        .state-wait { border-color: #f59e0b; box-shadow: 0 0 25px #f59e0b; }
-        .state-done { border-color: #10b981; box-shadow: 0 0 25px #10b981; }
-
+        .cam-box { width: 260px; height: 260px; background: #000; border-radius: 50%; margin: 20px auto; overflow: hidden; border: 5px solid #e2e8f0; position: relative; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        .modern-input {
-            width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 15px;
-            font-size: 16px; background: #f8fafc; outline: none; text-align: center; margin-bottom: 10px;
-        }
-        .btn-main {
-            width: 100%; padding: 15px; border: none; border-radius: 20px;
-            font-size: 18px; font-weight: 800; color: white; cursor: pointer;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
-        }
         
-        /* شاشة التحميل */
-        .loader-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.98); z-index: 50;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        /* النافذة المنبثقة */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 1000; display: none;
-            align-items: center; justify-content: center; backdrop-filter: blur(5px);
-        }
-        .modal-box {
-            background: white; width: 85%; max-width: 320px; padding: 30px;
-            border-radius: 25px; text-align: center; animation: popUp 0.4s;
-        }
-        .modal-icon { font-size: 50px; margin-bottom: 15px; }
-        .modal-title { font-size: 20px; font-weight: 900; margin-bottom: 10px; }
-        .ok-style .modal-icon { color: #10b981; }
-        .err-style .modal-icon { color: #ef4444; }
-
-        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .status-ok { border-color: #10b981; box-shadow: 0 0 20px #10b981; }
+        .status-wait { border-color: #f59e0b; box-shadow: 0 0 20px #f59e0b; }
+        
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #0ea5e9; }
+        
+        /* المودال */
+        .modal-bg { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; align-items:center; justify-content:center; z-index:100; }
+        .modal { background:white; width:80%; max-width:300px; padding:20px; border-radius:20px; text-align:center; }
     </style>
 </head>
 <body>
 
-    <div id="resultModal" class="modal-overlay">
-        <div class="modal-box" id="modalContent">
-            <div class="modal-icon" id="mIcon"></div>
-            <div class="modal-title" id="mTitle"></div>
-            <p id="mText" style="color:#64748b; font-size:14px; margin-bottom:20px;"></p>
-            <button class="btn-main" onclick="location.reload()" style="padding:10px; font-size:14px;">حسناً</button>
+    <div id="loader">
+        <h2>جاري تحميل النظام...</h2>
+        <p>يرجى الانتظار</p>
+    </div>
+
+    <div class="modal-bg" id="modal">
+        <div class="modal">
+            <h2 id="mTitle"></h2>
+            <p id="mMsg" style="color:#666;"></p>
+            <button onclick="location.reload()">حسناً</button>
         </div>
     </div>
 
-    <div class="main-card">
-        <div id="loader" class="loader-layer">
-            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:50px; color:#0ea5e9; margin-bottom:20px;"></i>
-            <h3>جاري تحميل النظام...</h3>
-        </div>
-
-        <div style="margin-bottom: 20px;"><i class="fa-solid fa-user-check" style="font-size: 40px; color: #0ea5e9;"></i></div>
-        <h1>تسجيل الحضور اليومي</h1>
-        
-        <div id="inputArea">
-            <p>أدخل بياناتك لتأكيد الحضور</p>
-            <input type="text" id="stName" class="modern-input" placeholder="الاسم">
-            <input type="number" id="stID" class="modern-input" placeholder="الـ ID">
-            <button class="btn-main" onclick="startCam()">تسجيل الحضور 📸</button>
+    <div class="card">
+        <h2>تسجيل الحضور</h2>
+        <div id="form">
+            <input type="text" id="name" placeholder="الاسم الثلاثي">
+            <input type="number" id="uid" placeholder="الرقم الجامعي (ID)">
+            <button onclick="initSystem()">ابدأ التسجيل 📸</button>
         </div>
 
         <div id="camArea" style="display:none;">
-            <div class="camera-wrapper" id="camBorder">
+            <div class="cam-box" id="camBorder">
                 <video id="video" autoplay muted playsinline></video>
             </div>
-            <h3 id="statusTxt" style="color:#0ea5e9;">جاري التشغيل...</h3>
+            <h3 id="status" style="color:#0ea5e9">اسمح بالكاميرا والموقع...</h3>
         </div>
     </div>
 
-    <audio id="beep" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
-
     <script>
-        // 🔗 رابط السكريبت الخاص بك
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx36V1RMbbK_dPfFPJ_K63mmdqqZNoTD2oF3JIrwPealPnjv1p1EoOv9JZFgBGpTrLr/exec";
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        // 🔴🔴 ضع الرابط الجديد هنا 🔴🔴
+        const API_URL = "https://script.google.com/macros/s/AKfycbyjD6AfuTjvGASOYE3MYstEypraGDeJSUFV1P3aXfafOzhiqZFWtDTGu5zjvmIi-on2/exec"; 
 
+        const MODEL_URI = 'https://justadudewhohacks.github.io/face-api.js/models';
         const video = document.getElementById('video');
-        let capturedDescriptor = null;
-        let step = 0;
-        let isProcessing = false;
+        let userLat = "", userLng = "";
+        let capturedVector = null;
 
-        window.addEventListener('load', async () => {
-            try {
-                await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-                ]);
-                document.getElementById('loader').style.display = 'none';
-            } catch (e) {
-                alert("خطأ في تحميل الملفات");
-            }
-        });
+        // تحميل الموديلات
+        window.onload = async () => {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URI),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URI),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URI)
+            ]);
+            document.getElementById('loader').style.display = 'none';
+        };
 
-        async function startCam() {
-            if(!document.getElementById('stName').value || !document.getElementById('stID').value) {
-                alert("يرجى إدخال البيانات"); return;
-            }
-            document.getElementById('inputArea').style.display = 'none';
-            document.getElementById('camArea').style.display = 'block';
+        async function initSystem() {
+            const name = document.getElementById('name').value;
+            const id = document.getElementById('uid').value;
+            if(!name || !id) return alert("أدخل البيانات!");
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                video.srcObject = stream;
-                document.getElementById('statusTxt').innerText = "👀 انظر للكاميرا";
-                startAI();
-            } catch(err) {
-                alert("الكاميرا محظورة"); location.reload();
+            // 1. طلب الموقع
+            if(navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    startCam();
+                }, err => {
+                    alert("⚠️ لازم تفتح الـ GPS عشان نسجلك!");
+                    startCam(); // هنكمل برضه بس هيطلع في الشيت من غير موقع
+                }, {enableHighAccuracy: true});
+            } else {
+                alert("موبايلك لا يدعم GPS");
+                startCam();
             }
         }
 
-        function startAI() {
-            step = 1; 
-            const loop = setInterval(async () => {
-                if(isProcessing) return;
-                const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        async function startCam() {
+            document.getElementById('form').style.display = 'none';
+            document.getElementById('camArea').style.display = 'block';
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                document.getElementById('status').innerText = "👀 انظر للكاميرا بثبات";
+                detectFace();
+            } catch(e) { alert("الكاميرا محظورة!"); location.reload(); }
+        }
 
-                if(detections) {
-                    const nose = detections.landmarks.getNose()[0];
-                    const leftJaw = detections.landmarks.getJawOutline()[0];
-                    const rightJaw = detections.landmarks.getJawOutline()[16];
-                    const ratio = Math.abs(nose.x - leftJaw.x) / Math.abs(nose.x - rightJaw.x);
+        function detectFace() {
+            let step = 1; // 1=Front, 2=Left
+            const loop = setInterval(async () => {
+                const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                
+                if(det) {
+                    const nose = det.landmarks.getNose()[0];
+                    const jaw = det.landmarks.getJawOutline();
+                    const left = Math.abs(nose.x - jaw[0].x);
+                    const right = Math.abs(nose.x - jaw[16].x);
+                    const ratio = left / right;
 
                     if(step === 1 && ratio > 0.7 && ratio < 1.3) {
-                        capturedDescriptor = Array.from(detections.descriptor);
+                        capturedVector = Array.from(det.descriptor);
                         step = 2;
-                        document.getElementById('camBorder').className = "camera-wrapper state-wait";
-                        document.getElementById('statusTxt').innerText = "⬅️ التفت لليسار";
-                        document.getElementById('statusTxt').style.color = "#f59e0b";
+                        document.getElementById('camBorder').className = "cam-box status-wait";
+                        document.getElementById('status').innerText = "⬅️ التفت لليسار";
+                        document.getElementById('status').style.color = "#f59e0b";
                     } else if(step === 2 && ratio < 0.5) {
                         clearInterval(loop);
-                        isProcessing = true;
-                        document.getElementById('camBorder').className = "camera-wrapper state-done";
-                        document.getElementById('statusTxt').innerText = "✅ جاري الإرسال...";
-                        document.getElementById('beep').play();
+                        document.getElementById('camBorder').className = "cam-box status-ok";
+                        document.getElementById('status').innerText = "✅ جاري الإرسال...";
                         sendData();
                     }
                 }
@@ -186,35 +140,30 @@
 
         function sendData() {
             const payload = {
-                id: document.getElementById('stID').value,
-                name: document.getElementById('stName').value,
-                vector: capturedDescriptor
+                id: document.getElementById('uid').value,
+                name: document.getElementById('name').value,
+                vector: capturedVector,
+                lat: userLat,
+                lng: userLng
             };
 
-            fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) })
-            .then(res => res.json())
+            fetch(API_URL, { method: "POST", body: JSON.stringify(payload) })
+            .then(r => r.json())
             .then(data => {
-                if(data.status === "success") showModal('success', 'تم الحضور', data.message);
-                else showModal('error', 'تنبيه', data.message);
+                const modal = document.getElementById('modal');
+                const title = document.getElementById('mTitle');
+                modal.style.display = 'flex';
+                
+                if(data.status === 'success') {
+                    title.innerText = "✅ تم بنجاح";
+                    title.style.color = "green";
+                } else {
+                    title.innerText = "❌ خطأ";
+                    title.style.color = "red";
+                }
+                document.getElementById('mMsg').innerText = data.message;
             })
-            .catch(err => showModal('error', 'خطأ', 'فشل الاتصال'));
-        }
-
-        function showModal(type, title, msg) {
-            const modal = document.getElementById('resultModal');
-            const content = document.getElementById('modalContent');
-            const icon = document.getElementById('mIcon');
-            modal.style.display = 'flex';
-            document.getElementById('mTitle').innerText = title;
-            document.getElementById('mText').innerText = msg;
-
-            if(type === 'success') {
-                content.className = "modal-box ok-style";
-                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
-            } else {
-                content.className = "modal-box err-style";
-                icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
-            }
+            .catch(e => alert("حدث خطأ في الاتصال"));
         }
     </script>
 </body>
