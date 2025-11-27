@@ -3,225 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bio-Metric Security System</title>
+    <title>نظام الحضور الصارم</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        :root {
-            --primary: #00f2ff;
-            --accent: #2196f3;
-            --bg-deep: #050505;
-            --glass: rgba(20, 30, 40, 0.7);
-            --success: #00ff88;
-            --warning: #ffcc00;
-            --danger: #ff0055;
-        }
-
-        body {
-            margin: 0; padding: 0; height: 100vh; overflow: hidden;
-            font-family: 'Cairo', sans-serif;
-            background: var(--bg-deep);
-            color: white;
-            display: flex; align-items: center; justify-content: center;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(33, 150, 243, 0.1) 0%, transparent 20%);
-        }
-
-        /* الكارت الرئيسي (Holographic Card) */
-        .cyber-panel {
-            width: 90%; max-width: 400px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 30px;
-            padding: 40px 20px;
-            box-shadow: 0 0 50px rgba(0, 242, 255, 0.05);
-            text-align: center;
-            position: relative;
-            transform-style: preserve-3d;
-            animation: floatCard 6s ease-in-out infinite;
-        }
-
-        /* نافذة الكاميرا (The Eye) */
-        .scan-window {
-            position: relative;
-            width: 260px; height: 260px;
-            margin: 20px auto;
-            border-radius: 50%; /* دائري */
-            background: #000;
-            overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.1);
-            box-shadow: 0 0 0 5px rgba(0,0,0,0.5), 0 0 30px rgba(0, 242, 255, 0.2);
-            transition: all 0.4s ease;
-        }
-
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); opacity: 0.8; }
-
-        /* تأثيرات الليزر */
-        .scanner-beam {
-            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-            background: var(--primary);
-            box-shadow: 0 0 20px var(--primary), 0 0 10px white;
-            animation: scanUpDown 2s infinite ease-in-out;
-            z-index: 10; display: none;
-        }
-
-        /* السهم التوجيهي */
-        .guide-arrow {
-            position: absolute; top: 50%; left: 15px; 
-            transform: translateY(-50%);
-            font-size: 50px; color: var(--warning);
-            z-index: 20; display: none;
-            filter: drop-shadow(0 0 10px var(--warning));
-            animation: pointLeft 0.8s infinite alternate;
-        }
-
-        /* دائرة الحالة */
-        .status-ring {
-            position: absolute; inset: 0; border-radius: 50%;
-            border: 4px solid transparent;
-            transition: 0.3s; pointer-events: none; z-index: 5;
-        }
-        .st-scan { border-color: var(--primary); border-top-color: transparent; animation: spin 2s infinite linear; }
-        .st-wait { border-color: var(--warning); box-shadow: inset 0 0 30px rgba(255, 204, 0, 0.3); }
-        .st-ok { border-color: var(--success); box-shadow: 0 0 30px var(--success); }
-
-        /* النصوص والمدخلات */
-        h2 { font-family: 'Rajdhani', sans-serif; text-transform: uppercase; margin: 0; letter-spacing: 2px; }
-        .input-cyber {
-            width: 100%; padding: 15px; margin-bottom: 15px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px; color: white; text-align: center; font-size: 16px;
-            outline: none; transition: 0.3s;
-        }
-        .input-cyber:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
-
-        .btn-cyber {
-            width: 100%; padding: 15px; background: linear-gradient(90deg, var(--primary), #0088ff);
-            color: #000; font-weight: 800; border: none; border-radius: 12px;
-            cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
-            transition: 0.3s; font-family: 'Rajdhani'; font-size: 18px;
-        }
-        .btn-cyber:active { transform: scale(0.98); }
-        .btn-cyber:disabled { background: #333; color: #666; cursor: not-allowed; }
-
-        /* شاشات */
-        .section { display: none; opacity: 0; transform: scale(0.95); transition: 0.4s; }
-        .section.active { display: block; opacity: 1; transform: scale(1); }
-
-        /* Loader */
-        #bootLoader { position: fixed; inset: 0; background: #000; z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-
-        /* نافذة التنبيه */
-        .popup-modal {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.9); z-index: 500;
-            display: none; align-items: center; justify-content: center;
-        }
-        .popup-content {
-            background: #111; border: 1px solid #333; padding: 30px;
-            border-radius: 20px; text-align: center; max-width: 300px;
-            box-shadow: 0 0 50px rgba(255,0,0,0.2);
-        }
-
-        @keyframes scanUpDown { 0%,100% {top:0} 50% {top:100%} }
-        @keyframes spin { to {transform: rotate(360deg);} }
-        @keyframes floatCard { 0%,100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
-        @keyframes pointLeft { from {transform:translateY(-50%) translateX(0);} to {transform:translateY(-50%) translateX(-15px);} }
+        /* نفس التصميم الذي أعجبك (Light Glass) */
+        :root { --primary: #0ea5e9; --glass: rgba(255, 255, 255, 0.95); --bg: #0f172a; }
+        body { font-family: 'Cairo'; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-image: url('https://a.top4top.io/p_36115ao3o1.jpg'); background-size: cover; overflow: hidden; }
+        .app-card { background: var(--glass); width: 90%; max-width: 400px; border-radius: 30px; padding: 30px 20px; text-align: center; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .scan-box { width: 260px; height: 260px; margin: 20px auto; border-radius: 50px; background: #000; overflow: hidden; border: 4px solid #e2e8f0; position: relative; transform: translateZ(0); }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .laser-beam { position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(to bottom, transparent, #0ea5e9); border-bottom: 3px solid #0ea5e9; animation: scan 2s infinite; display: none; }
+        .input-ui { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 15px; margin-bottom: 10px; text-align: center; font-size: 16px; outline: none; }
+        .btn-ui { width: 100%; padding: 15px; background: #0ea5e9; color: white; border: none; border-radius: 18px; font-weight: bold; cursor: pointer; }
+        .btn-ui:disabled { background: #94a3b8; }
+        .section { display: none; } .section.active { display: block; animation: fade 0.5s; }
+        @keyframes scan { 0% {top:-50%} 100% {top:100%} } @keyframes fade { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+        
+        /* النوافذ */
+        .modal { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .m-content { background: white; padding: 30px; border-radius: 25px; text-align: center; width: 80%; max-width: 320px; }
     </style>
 </head>
 <body>
 
-    <div id="bootLoader">
-        <i class="fa-solid fa-microchip fa-spin" style="font-size: 50px; color: var(--primary); margin-bottom: 20px;"></i>
-        <div style="font-family: 'Rajdhani'; color: var(--primary); letter-spacing: 3px;">SYSTEM INITIALIZING...</div>
+    <div id="loader" style="position:fixed; inset:0; background:rgba(255,255,255,0.98); z-index:200; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <i class="fa-solid fa-server fa-spin" style="font-size:40px; color:#0ea5e9; margin-bottom:20px;"></i>
+        <h3>جاري تحميل النظام...</h3>
     </div>
 
-    <div id="alertPopup" class="popup-modal">
-        <div class="popup-content">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size: 50px; color: var(--danger); margin-bottom: 15px;"></i>
-            <h3 style="color: white; margin:0;">تنبيه أمني</h3>
-            <p id="alertText" style="color: #aaa; font-size: 13px;">تم كشف محاولة تكرار.</p>
-            <button onclick="location.reload()" class="btn-cyber" style="background: var(--danger); color: white;">إغلاق</button>
+    <div id="resultModal" class="modal">
+        <div class="m-content">
+            <div id="resIcon" style="font-size:50px; margin-bottom:15px;"></div>
+            <h2 id="resTitle" style="margin:0;"></h2>
+            <p id="resMsg" style="color:#666; font-size:13px;"></p>
+            <button onclick="location.reload()" class="btn-ui" style="margin-top:15px;">حسناً</button>
         </div>
     </div>
 
-    <div class="cyber-panel">
-        
-        <div id="viewInput" class="section active">
-            <div style="margin-bottom: 20px;">
-                <i class="fa-solid fa-user-shield" style="font-size: 40px; color: var(--primary);"></i>
-            </div>
-            <h2>تأكيد الهوية</h2>
-            <p style="color: #888; font-size: 12px; margin-bottom: 25px;">يرجى إدخال البيانات لتفعيل البصمة المكانية</p>
-
-            <input type="text" id="uName" class="input-cyber" placeholder="الاسم الكامل">
-            <input type="number" id="uID" class="input-cyber" placeholder="الرقم التعريفي (ID)">
-
-            <button onclick="initSystem()" id="btnStart" class="btn-cyber">
-                START SCAN <i class="fa-solid fa-power-off"></i>
-            </button>
-            <div id="gpsTxt" style="margin-top:15px; font-size:10px; color:#555;">GPS SIGNAL: SEARCHING...</div>
+    <div class="app-card">
+        <div id="secInput" class="section active">
+            <h2 style="color:#0ea5e9">تسجيل الحضور</h2>
+            <p>أدخل بياناتك بدقة</p>
+            <input type="text" id="uName" class="input-ui" placeholder="الاسم الثلاثي">
+            <input type="number" id="uID" class="input-ui" placeholder="الكود الجامعي">
+            <button onclick="checkData()" id="btnStart" class="btn-ui">بدء الكاميرا</button>
+            <div id="gpsStat" style="font-size:11px; margin-top:10px; color:#999;">GPS REQUIRED</div>
         </div>
 
-        <div id="viewScan" class="section">
-            <h2 id="scanTitle" style="color:var(--primary);">التحقق البيومتري</h2>
-            <p id="scanHint" style="color:#aaa; font-size:12px;">جاري تشغيل المستشعرات...</p>
-
-            <div class="scan-window">
-                <video id="webcam" autoplay muted playsinline></video>
-                <div class="scanner-beam" id="beam"></div>
-                <div class="guide-arrow" id="arrow"><i class="fa-solid fa-arrow-left"></i></div>
-                <div class="status-ring" id="ring"></div>
-                
-                <div id="counter" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:80px; font-weight:900; color:white; text-shadow:0 0 20px var(--primary); z-index:30; display:none;">3</div>
+        <div id="secCam" class="section">
+            <h3 id="camStatus">جاري الفحص...</h3>
+            <div class="scan-box" id="camBox">
+                <video id="vid" autoplay muted playsinline></video>
+                <div class="laser-beam" id="laser"></div>
             </div>
-
-            <div style="font-family:'Rajdhani'; color:var(--primary); font-size:14px; margin-top:10px;">
-                <i class="fa-solid fa-location-crosshairs"></i> <span id="locData">-- , --</span>
-            </div>
+            <p id="camHint" style="color:#0ea5e9; font-weight:bold;">اثبت مكانك</p>
         </div>
-
-        <div id="viewSuccess" class="section">
-            <div style="width:80px; height:80px; border-radius:50%; border:2px solid var(--success); display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; box-shadow:0 0 30px var(--success);">
-                <i class="fa-solid fa-check" style="font-size:40px; color:var(--success);"></i>
-            </div>
-            <h2 style="color:var(--success);">ACCESS GRANTED</h2>
-            <p style="color:white;">تم تسجيل الحضور وتحليل الموقع بنجاح.</p>
-            
-            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; margin-bottom:20px;">
-                <div style="font-size:11px; color:#aaa;">LOCATION STATUS</div>
-                <div id="finalStatus" style="font-weight:bold; color:var(--primary);">Analyzing...</div>
-            </div>
-
-            <button onclick="location.reload()" class="btn-cyber" style="background:#222; color:#fff;">تسجيل جديد</button>
-        </div>
-
     </div>
-
-    <audio id="sndScan" src="https://www.soundjay.com/buttons/sounds/beep-22.mp3"></audio>
-    <audio id="sndDone" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
-    <audio id="sndErr" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
     <script>
-        // === الإعدادات ===
         const CONFIG = {
-            // الرابط الذي أنشأته
-            apiUrl: "https://script.google.com/macros/s/AKfycbxjrxV8Y47W0kyf1FxrctuqUEcf3wQUuXJo9n1J77RncmaMn2vc8v0jCSyPAEHwLhey/exec",
+            // 🔴🔴 ضع الرابط الجديد هنا 🔴🔴
+            apiUrl: "https://script.google.com/macros/s/AKfycbyVwg9zMZq961sx7ifrwZpYwP2ha24rhxDkuLRrDegvQgzy3QBTVZymcVm857IAPDoG/exec",
             models: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
 
-        let userInfo = { id: null, name: null, lat: null, lng: null, vector: null };
+        let user = { id: null, name: null, lat: null, lng: null, vector: null };
         let stream = null;
-        let lastNoseX = 0;
+        let isSubmitting = false; // 🔒 القفل لمنع التكرار
 
-        // 1. تشغيل النظام
         window.onload = async () => {
             try {
                 await Promise.all([
@@ -230,151 +85,89 @@
                     faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.models),
                     faceapi.nets.faceExpressionNet.loadFromUri(CONFIG.models)
                 ]);
-                document.getElementById('bootLoader').style.display = 'none';
-            } catch (e) { alert("فشل تحميل النظام"); }
+                document.getElementById('loader').style.display = 'none';
+            } catch(e) { alert("فشل تحميل الموديلات"); }
         };
 
-        // 2. التحقق والموقع
-        function initSystem() {
+        function checkData() {
             const name = document.getElementById('uName').value;
             const id = document.getElementById('uID').value;
-            const btn = document.getElementById('btnStart');
-            const gps = document.getElementById('gpsTxt');
+            if(name.length < 3 || id.length < 3) return alert("بيانات ناقصة");
+            
+            user.name = name; user.id = id;
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStart').innerText = "جاري تحديد الموقع...";
 
-            if(name.length < 3 || id.length < 3) return alert("البيانات غير مكتملة");
-
-            userInfo.name = name;
-            userInfo.id = id;
-            btn.disabled = true;
-            btn.innerText = "CONNECTING GPS...";
-
-            if (navigator.geolocation) {
+            if(navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
-                    userInfo.lat = pos.coords.latitude;
-                    userInfo.lng = pos.coords.longitude;
-                    gps.innerText = "GPS LOCKED ✅";
-                    gps.style.color = "var(--success)";
-                    document.getElementById('locData').innerText = `${userInfo.lat.toFixed(4)} , ${userInfo.lng.toFixed(4)}`;
+                    user.lat = pos.coords.latitude;
+                    user.lng = pos.coords.longitude;
+                    document.getElementById('gpsStat').innerText = "GPS OK";
+                    document.getElementById('gpsStat').style.color = "green";
                     startCam();
-                }, () => {
-                    btn.disabled = false;
-                    btn.innerText = "RETRY";
-                    alert("الموقع مطلوب!");
-                }, {enableHighAccuracy: true});
-            } else { alert("لا يوجد GPS"); }
+                }, () => { alert("الموقع مطلوب!"); location.reload(); }, {enableHighAccuracy: true});
+            } else { alert("GPS Not Supported"); }
         }
 
-        // 3. الكاميرا والذكاء الاصطناعي
         async function startCam() {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById('viewScan').classList.add('active');
-
+            document.getElementById('secInput').classList.remove('active');
+            document.getElementById('secCam').classList.add('active');
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                document.getElementById('webcam').srcObject = stream;
-                runBrain();
-            } catch(e) { alert("الكاميرا محظورة"); location.reload(); }
+                document.getElementById('vid').srcObject = stream;
+                runAI();
+            } catch(e) { alert("الكاميرا مطلوبة"); location.reload(); }
         }
 
-        function runBrain() {
-            const video = document.getElementById('webcam');
-            const beam = document.getElementById('beam');
-            const arrow = document.getElementById('arrow');
-            const ring = document.getElementById('ring');
-            const hint = document.getElementById('scanHint');
-            const countEl = document.getElementById('counter');
-
-            let step = 0; // 0=Stable, 1=Twist
-            let frames = 0;
-            let timer = null;
-
+        function runAI() {
+            const video = document.getElementById('vid');
+            const laser = document.getElementById('laser');
+            const hint = document.getElementById('camHint');
+            const box = document.getElementById('camBox');
+            
+            let stableFrames = 0;
             const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
 
             const loop = setInterval(async () => {
-                if(video.paused || video.ended) return;
+                if(isSubmitting) { clearInterval(loop); return; } // إيقاف اللوب عند الإرسال
 
-                const det = await faceapi.detectSingleFace(video, opts).withFaceLandmarks().withFaceDescriptor().withFaceExpressions();
+                const det = await faceapi.detectSingleFace(video, opts).withFaceLandmarks().withFaceDescriptor();
 
                 if(det) {
-                    const nose = det.landmarks.getNose()[0];
-                    const jaw = det.landmarks.getJawOutline();
-                    const ratio = Math.abs(nose.x - jaw[0].x) / Math.abs(nose.x - jaw[16].x);
-                    const diff = Math.abs(nose.x - lastNoseX);
-                    lastNoseX = nose.x;
-                    
-                    const isStable = diff < 5 && det.expressions.neutral > 0.7;
+                    stableFrames++;
+                    box.style.borderColor = "#0ea5e9";
+                    laser.style.display = "block";
+                    hint.innerText = "جاري المسح... " + (stableFrames*10) + "%";
 
-                    // --- المرحلة 1: الثبات ---
-                    if(step === 0) {
-                        if(ratio > 0.7 && ratio < 1.3 && isStable) {
-                            frames++;
-                            ring.className = "status-ring st-scan";
-                            beam.style.display = "block";
-                            hint.innerText = "جاري مسح الملامح... " + (frames*10) + "%";
-                            hint.style.color = "var(--primary)";
-
-                            if(frames > 10) {
-                                document.getElementById('sndScan').play();
-                                step = 1; 
-                                frames = 0;
-                                beam.style.display = "none";
-                                
-                                // بدء العد
-                                let c = 3;
-                                countEl.style.display = "flex";
-                                timer = setInterval(() => {
-                                    countEl.innerText = c;
-                                    c--;
-                                    if(c < 0) {
-                                        clearInterval(timer);
-                                        countEl.style.display = "none";
-                                        userInfo.vector = Array.from(det.descriptor);
-                                        
-                                        // الانتقال للالتفات
-                                        step = 2;
-                                        ring.className = "status-ring st-wait";
-                                        arrow.style.display = "block"; // ⬅️
-                                        hint.innerHTML = "التفت باتجاه السهم";
-                                        hint.style.color = "var(--warning)";
-                                    }
-                                }, 800);
-                            }
-                        } else {
-                            frames = 0;
-                            ring.className = "status-ring";
-                            beam.style.display = "none";
-                            hint.innerText = "اثبت أمام الكاميرا";
-                            hint.style.color = "#aaa";
-                        }
+                    if(stableFrames > 10) {
+                        // تم التقاط الوجه بنجاح
+                        clearInterval(loop);
+                        user.vector = Array.from(det.descriptor);
+                        box.style.borderColor = "#10b981"; // أخضر
+                        hint.innerText = "تم الالتقاط! جاري الإرسال...";
+                        uploadData();
                     }
-
-                    // --- المرحلة 2: الالتفات ---
-                    else if(step === 2) {
-                        if(ratio < 0.6) { // Left Turn
-                            clearInterval(loop);
-                            arrow.style.display = "none";
-                            ring.className = "status-ring st-ok";
-                            hint.innerText = "تم التحقق!";
-                            hint.style.color = "var(--success)";
-                            document.getElementById('sndDone').play();
-                            upload();
-                        }
-                    }
+                } else {
+                    stableFrames = 0;
+                    box.style.borderColor = "#e2e8f0";
+                    laser.style.display = "none";
+                    hint.innerText = "انظر للكاميرا";
                 }
-            }, 100);
+            }, 200);
         }
 
-        // 4. الإرسال والرد
-        function upload() {
+        function uploadData() {
+            if(isSubmitting) return; // منع التكرار
+            isSubmitting = true; 
+
             if(stream) stream.getTracks().forEach(t => t.stop());
-            document.getElementById('scanTitle').innerText = "جاري الاتصال بالسيرفر...";
 
             const payload = {
-                id: userInfo.id,
-                name: userInfo.name,
-                lat: userInfo.lat,
-                lng: userInfo.lng,
-                vector: JSON.stringify(userInfo.vector)
+                id: user.id,
+                name: user.name,
+                lat: user.lat,
+                lng: user.lng,
+                vector: JSON.stringify(user.vector)
             };
 
             fetch(CONFIG.apiUrl, {
@@ -383,25 +176,39 @@
             })
             .then(res => res.json())
             .then(data => {
-                if(data.status === 'duplicate' || data.status === 'error') {
-                    // نافذة خطأ/تكرار
-                    document.getElementById('alertText').innerText = data.message;
-                    document.getElementById('alertPopup').style.display = 'flex';
-                    document.getElementById('sndErr').play();
-                } else {
-                    // نجاح
-                    document.getElementById('finalStatus').innerText = data.message.includes('بعيد') ? "⚠️ تحذير: بعيد عن التجمع" : "✅ موقع سليم";
-                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                    document.getElementById('viewSuccess').classList.add('active');
-                    confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-                }
+                showResult(data);
             })
             .catch(e => {
-                // التعامل مع CORS لو السكريبت لم يرجع JSON
-                // نفترض النجاح كحل أخير
-                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                document.getElementById('viewSuccess').classList.add('active');
+                // في حالة no-cors قد لا نرى الرد، لكن السيرفر سيسجل
+                // سنعرض رسالة عامة
+                showResult({status: 'unknown', message: 'تم إرسال الطلب. تحقق من حالتك.'});
             });
+        }
+
+        function showResult(data) {
+            const modal = document.getElementById('resultModal');
+            const icon = document.getElementById('resIcon');
+            const title = document.getElementById('resTitle');
+            const msg = document.getElementById('resMsg');
+
+            modal.style.display = 'flex';
+
+            if(data.status === 'success') {
+                icon.innerHTML = '<i class="fa-solid fa-check-circle" style="color:#10b981;"></i>';
+                title.innerText = "تم الحضور";
+                title.style.color = "#10b981";
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            } else if (data.status === 'duplicate') {
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i>';
+                title.innerText = "محاولة غش!";
+                title.style.color = "#ef4444";
+                if(navigator.vibrate) navigator.vibrate(500);
+            } else {
+                icon.innerHTML = '<i class="fa-solid fa-info-circle" style="color:#f59e0b;"></i>';
+                title.innerText = "تنبيه";
+                title.style.color = "#f59e0b";
+            }
+            msg.innerText = data.message;
         }
     </script>
 </body>
