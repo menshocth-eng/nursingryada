@@ -3,229 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام البصمة الحيوية المتقدم</title>
+    <title>تسجيل الحضور البيومتري</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;500;700;900&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        /* === تصميم المستقبل (Cyberpunk / Glass) === */
+        /* === التصميم الحديث (Light Glass Theme) === */
         :root {
-            --primary: #00f2ff; /* Cyan Neon */
-            --secondary: #7000ff; /* Purple Neon */
-            --success: #00ff9d;
-            --warning: #ffbf00;
-            --error: #ff0055;
-            --bg-deep: #050505;
-            --glass: rgba(20, 20, 30, 0.7);
+            --primary: #0ea5e9;       /* أزرق سماوي */
+            --primary-dark: #0284c7;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #1e293b;
+            --bg-dark: #0f172a;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            margin: 0; padding: 0; height: 100vh;
             font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-deep);
-            background-image: 
-                linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
-            background-size: 30px 30px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            overflow: hidden; color: white;
+            background-color: var(--bg-dark);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0;
+            background-image: url('https://a.top4top.io/p_36115ao3o1.jpg');
+            background-size: cover;
+            overflow: hidden;
         }
 
-        /* حاوية النظام الزجاجية */
-        .cyber-card {
-            width: 95%; max-width: 400px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* البطاقة الرئيسية */
+        .app-card {
+            background: var(--glass-bg);
+            width: 90%; max-width: 400px;
             border-radius: 30px;
-            padding: 30px 20px;
-            box-shadow: 0 0 40px rgba(0, 242, 255, 0.1);
-            position: relative; overflow: hidden;
+            padding: 35px 25px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             text-align: center;
-            animation: cardFloat 6s ease-in-out infinite alternate;
+            position: relative; overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: height 0.3s ease;
         }
 
-        /* === نافذة الكاميرا السحرية === */
-        .cam-wrapper {
+        /* === وحدة الكاميرا (The Eye) === */
+        .scan-box {
             position: relative;
             width: 260px; height: 260px;
             margin: 20px auto;
             border-radius: 50px; /* Squircle Shape */
             background: #000;
             overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.1);
-            box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 242, 255, 0.2);
-            transform: translateZ(0); /* تسريع الهاردوير */
+            border: 4px solid #e2e8f0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px -5px rgba(14, 165, 233, 0.2);
+            transition: all 0.3s ease;
+            transform: translateZ(0);
         }
 
         video {
             width: 100%; height: 100%; object-fit: cover;
             transform: scaleX(-1); /* مرآة */
+            opacity: 0.9;
         }
 
-        /* الليزر الماسح */
-        .scanner-beam {
-            position: absolute; top: 0; left: 0; width: 100%; height: 3px;
-            background: var(--primary);
-            box-shadow: 0 0 15px var(--primary), 0 0 30px var(--primary);
-            animation: scanAnim 2s infinite ease-in-out;
-            z-index: 10; display: none;
+        /* تأثير الليزر */
+        .laser-beam {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50%;
+            background: linear-gradient(to bottom, transparent, rgba(14, 165, 233, 0.6));
+            border-bottom: 3px solid var(--primary);
+            filter: drop-shadow(0 0 10px var(--primary));
+            animation: scanMotion 2s infinite ease-in-out;
+            z-index: 5; display: none;
         }
 
-        /* السهم التوجيهي الكبير (الإضافة الجديدة) */
+        /* السهم التوجيهي */
         .direction-arrow {
-            position: absolute; top: 50%; left: 20px; /* يظهر على اليسار */
+            position: absolute; top: 50%; left: 20px;
             transform: translateY(-50%);
-            font-size: 60px; color: var(--warning);
-            z-index: 20; display: none;
-            filter: drop-shadow(0 0 10px rgba(255, 191, 0, 0.8));
-            animation: pointLeft 1s infinite alternate;
+            font-size: 50px; color: var(--warning);
+            background: rgba(255,255,255,0.2); backdrop-filter: blur(5px);
+            border-radius: 15px; padding: 10px;
+            z-index: 10; display: none;
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+            animation: arrowMove 0.8s infinite alternate;
         }
 
-        /* الحدود التفاعلية */
-        .status-border {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            border: 6px solid transparent; border-radius: 50px;
-            transition: all 0.3s; pointer-events: none; z-index: 5;
+        /* حالات الحدود */
+        .mode-scan { border-color: var(--primary); box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.15); }
+        .mode-wait { border-color: var(--warning); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15); }
+        .mode-done { border-color: var(--success); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.15); }
+
+        /* العناصر والتفاعلات */
+        h2 { margin: 0 0 5px 0; font-weight: 800; color: var(--text-main); }
+        p { margin: 0 0 20px 0; color: #64748b; font-size: 13px; font-weight: 600; }
+
+        .modern-input {
+            width: 100%; padding: 16px;
+            border: 2px solid #e2e8f0; border-radius: 18px;
+            font-size: 16px; text-align: center;
+            background: #f8fafc; outline: none; transition: 0.3s;
+            margin-bottom: 12px; font-weight: 700; color: var(--text-main);
         }
+        .modern-input:focus { border-color: var(--primary); background: white; }
+
+        .btn-main {
+            width: 100%; padding: 16px; border: none; border-radius: 18px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; font-weight: 800; font-size: 16px; cursor: pointer;
+            box-shadow: 0 8px 20px -5px rgba(14, 165, 233, 0.4);
+            transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-main:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+        /* حالة الـ GPS */
+        .status-pill {
+            background: #f1f5f9; color: #64748b;
+            padding: 8px 15px; border-radius: 20px;
+            font-weight: 700; font-size: 12px;
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 15px; transition: 0.3s;
+        }
+
+        /* النوافذ المنبثقة (Modals) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+            z-index: 200; display: none; align-items: center; justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+        .modal-box {
+            background: white; width: 85%; max-width: 320px; padding: 30px;
+            border-radius: 30px; text-align: center; position: relative;
+            transform: scale(0.9); animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .modal-icon-box {
+            width: 80px; height: 80px; margin: 0 auto 15px auto; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 35px;
+        }
+        .type-success .modal-icon-box { background: #d1fae5; color: var(--success); }
+        .type-warning .modal-icon-box { background: #fee2e2; color: var(--danger); }
         
-        .st-scan { border-color: var(--primary); box-shadow: inset 0 0 20px var(--primary); }
-        .st-wait { border-color: var(--warning); box-shadow: inset 0 0 30px var(--warning); }
-        .st-ok   { border-color: var(--success); box-shadow: inset 0 0 40px var(--success); }
-
-        /* النصوص والأزرار */
-        h1 { margin: 0; font-family: 'Orbitron', sans-serif; letter-spacing: 2px; font-size: 20px; background: linear-gradient(90deg, #fff, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        .cyber-input {
-            width: 100%; padding: 15px; margin-bottom: 15px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px; color: white; text-align: center; font-size: 18px;
-            font-family: 'Cairo'; outline: none; transition: 0.3s;
-        }
-        .cyber-input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2); }
-
-        .cyber-btn {
-            width: 100%; padding: 16px; border: none; border-radius: 12px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white; font-weight: 900; font-size: 16px; cursor: pointer;
-            text-transform: uppercase; letter-spacing: 1px;
-            box-shadow: 0 5px 20px rgba(112, 0, 255, 0.4);
-            position: relative; overflow: hidden; transition: 0.3s;
-        }
-        .cyber-btn::before {
-            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transition: 0.5s;
-        }
-        .cyber-btn:hover::before { left: 100%; }
-        .cyber-btn:disabled { background: #333; cursor: not-allowed; box-shadow: none; }
-
-        /* شاشات */
-        .section { display: none; opacity: 0; transform: translateY(10px); transition: all 0.5s ease; }
-        .section.active { display: block; opacity: 1; transform: translateY(0); }
-
-        /* اللودر */
-        #systemLoader {
-            position: fixed; inset: 0; background: #000; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+        /* التحويل بين الشاشات */
+        .section { display: none; opacity: 0; transition: 0.3s; }
+        .section.active { display: block; opacity: 1; animation: slideUp 0.5s; }
 
         /* Animations */
-        @keyframes scanAnim { 0% {top:0} 50% {top:100%} 100% {top:0} }
-        @keyframes pointLeft { from {transform:translateY(-50%) translateX(0);} to {transform:translateY(-50%) translateX(-10px);} }
-        @keyframes cardFloat { from {transform: translateY(0);} to {transform: translateY(-10px);} }
+        @keyframes scanMotion { 0% {top: -50%;} 100% {top: 100%;} }
+        @keyframes arrowMove { from {transform:translateY(-50%) translateX(0);} to {transform:translateY(-50%) translateX(-15px);} }
+        @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+        @keyframes popUp { to {transform: scale(1);} }
+        @keyframes slideUp { from {opacity:0; transform:translateY(15px);} to {opacity:1; transform:translateY(0);} }
     </style>
 </head>
 <body>
 
-    <div id="systemLoader">
-        <i class="fa-solid fa-dna fa-spin" style="font-size: 60px; color: var(--primary); margin-bottom: 20px;"></i>
-        <h2 style="font-family: 'Orbitron'; letter-spacing: 3px; color: white;">SYSTEM LOADING</h2>
-        <p style="color: var(--primary); font-size: 12px;">LOADING NEURAL NETWORKS...</p>
+    <div id="loaderOverlay" style="position:fixed; inset:0; background:rgba(255,255,255,0.98); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <i class="fa-solid fa-face-viewfinder fa-bounce" style="font-size:50px; color:#0ea5e9; margin-bottom:20px;"></i>
+        <h3 style="color:#1e293b;">تهيئة النظام البيومتري...</h3>
     </div>
 
-    <div class="cyber-card">
+    <div id="modalSuccess" class="modal-overlay">
+        <div class="modal-box type-success">
+            <div class="modal-icon-box"><i class="fa-solid fa-check"></i></div>
+            <h2 style="color:#10b981; margin:0 0 10px 0;">تم التعرف عليك</h2>
+            <p style="color:#64748b; font-weight:600;">تم تسجيل حضورك بنجاح لهذا اليوم.</p>
+            <button onclick="location.reload()" class="btn-main" style="margin-top:15px; background:#10b981;">حسناً</button>
+        </div>
+    </div>
+
+    <div id="modalDuplicate" class="modal-overlay">
+        <div class="modal-box type-warning">
+            <div class="modal-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 style="color:#ef4444; margin:0 0 10px 0;">تنبيه أمني!</h2>
+            <p style="color:#1e293b; font-weight:bold;">تم التعرف على الوجه للمرة الثانية</p>
+            <p style="color:#ef4444; font-size:12px;">جاري إبلاغ النظام بمحاولة التكرار...</p>
+            <button onclick="location.reload()" class="btn-main" style="margin-top:15px; background:#ef4444;">إغلاق</button>
+        </div>
+    </div>
+
+    <div class="app-card">
         
-        <div id="screenInput" class="section active">
-            <div style="margin-bottom: 20px;">
-                <i class="fa-solid fa-user-astronaut" style="font-size: 50px; color: var(--primary);"></i>
+        <div id="viewInput" class="section active">
+            <div style="margin-bottom:20px; width:70px; height:70px; background:#f0f9ff; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;">
+                <i class="fa-solid fa-fingerprint" style="font-size:30px; color:#0ea5e9;"></i>
             </div>
-            <h1>تسجيل الهوية الرقمية</h1>
-            <p style="color: #aaa; margin-bottom: 30px;">نظام الحضور الذكي - كلية التمريض</p>
+            <h2>تسجيل الحضور</h2>
+            <p>أدخل بياناتك للمتابعة</p>
 
-            <input type="text" id="inName" class="cyber-input" placeholder="الاسم الثلاثي">
-            <input type="number" id="inID" class="cyber-input" placeholder="الكود الجامعي (ID)">
+            <input type="text" id="inName" class="modern-input" placeholder="الاسم الثلاثي">
+            <input type="number" id="inID" class="modern-input" placeholder="الكود الجامعي (ID)">
 
-            <button onclick="startSequence()" class="cyber-btn" id="btnInit">
-                تشغيل النظام <i class="fa-solid fa-power-off"></i>
+            <button onclick="checkPermissions()" class="btn-main" id="btnInit">
+                بدء الفحص <i class="fa-solid fa-arrow-left"></i>
             </button>
-            
-            <div id="gpsMsg" style="margin-top: 15px; font-size: 11px; color: #555;">GPS SIGNAL REQUIRED</div>
+            <div id="gpsStatus" class="status-pill">
+                <i class="fa-solid fa-location-crosshairs"></i> في انتظار تفعيل الموقع
+            </div>
         </div>
 
-        <div id="screenCam" class="section">
-            <h1 id="camStatus">جاري تهيئة الكاميرا...</h1>
-            
-            <div class="cam-wrapper">
+        <div id="viewCamera" class="section">
+            <h2 id="camTitle" style="font-size:18px;">التحقق من الوجه</h2>
+            <p id="camHint" style="font-size:13px; color:#0ea5e9; font-weight:bold; margin-bottom:15px;">جاري تشغيل الكاميرا...</p>
+
+            <div class="scan-box" id="camBox">
                 <video id="videoElement" autoplay muted playsinline></video>
-                <div class="scanner-beam" id="scanLaser"></div>
-                <div class="status-border" id="camBorder"></div>
                 
-                <i class="fa-solid fa-arrow-left direction-arrow" id="arrowLeft"></i>
+                <div class="laser-beam" id="scanLaser"></div>
+                <div class="direction-arrow" id="arrowIcon"><i class="fa-solid fa-arrow-left"></i></div>
                 
-                <div id="camCounter" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:80px; font-weight:900; color:white; text-shadow:0 0 20px var(--primary); z-index:15; display:none;">3</div>
+                <div id="camCount" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:80px; font-weight:900; color:white; text-shadow:0 0 20px black; z-index:20; display:none;">3</div>
             </div>
 
-            <p id="camInstruction" style="color: var(--primary); font-weight: bold; font-size: 14px;">يرجى الانتظار...</p>
-            
-            <div style="display:flex; justify-content: center; gap: 10px;">
-                <span style="font-size:10px; color:#555;" id="debugGPS">GPS: --</span>
+            <div class="status-pill" id="liveStatus" style="color:var(--primary-dark);">
+                <i class="fa-solid fa-shield-halved"></i> التحقق من الحيوية
             </div>
-        </div>
-
-        <div id="screenSuccess" class="section">
-            <div style="width: 80px; height: 80px; background: rgba(0, 255, 157, 0.1); border-radius: 50%; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; border: 2px solid var(--success);">
-                <i class="fa-solid fa-check" style="font-size: 40px; color: var(--success);"></i>
-            </div>
-            <h1 style="color: var(--success) !important;">تم التوثيق</h1>
-            <p style="color: white;">تم تسجيل حضورك بنجاح اليوم.</p>
-            
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; text-align: right;">
-                <div style="font-size: 12px; color: #aaa;">الاسم: <span style="color:white; font-weight:bold;" id="resName">--</span></div>
-                <div style="font-size: 12px; color: #aaa;">التوقيت: <span style="color:white; font-weight:bold;" id="resTime">--</span></div>
-            </div>
-
-            <button onclick="location.reload()" class="cyber-btn" style="background: #222; border: 1px solid #444;">
-                خروج
-            </button>
         </div>
 
     </div>
 
-    <audio id="sBeep" src="https://www.soundjay.com/buttons/sounds/beep-22.mp3"></audio>
-    <audio id="sSuccess" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
-    <audio id="sScan" src="https://www.soundjay.com/mechanical/sounds/mechanical-clonk-1.mp3"></audio>
+    <audio id="sndBeep" src="https://www.soundjay.com/buttons/sounds/beep-22.mp3"></audio>
+    <audio id="sndSuccess" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+    <audio id="sndError" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
     <script>
         // ==========================================
-        //  إعدادات النظام
+        //  الإعدادات
         // ==========================================
         const CONFIG = {
-            sheetUrl: "https://script.google.com/macros/s/AKfycbxtD3jtznibDuh8eXMONGEkoF27qk65_KcaNqwtGneN_ijEJBEgrW_qN9ktbZF-PSxt/exec",
+            // ⚠️ تأكد من تحديث هذا الرابط بآخر رابط Deploy حصلت عليه
+            scriptUrl: "https://script.google.com/macros/s/AKfycbyXnPh5e6iTSY2GygRKX8hytTtyhFrMqV_ZpyqmO19IgP3dIzN169iP2s_fIaF23TVU/exec",
             models: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
 
         let userData = { id: null, name: null, lat: null, lng: null, vector: null };
-        let lastNoseX = 0;
         let stream = null;
+        let lastNoseX = 0;
 
-        // 1. تشغيل النظام وتحميل الموديلات
+        // 1. التحميل
         window.onload = async () => {
             try {
                 await Promise.all([
@@ -234,171 +252,145 @@
                     faceapi.nets.faceRecognitionNet.loadFromUri(CONFIG.models),
                     faceapi.nets.faceExpressionNet.loadFromUri(CONFIG.models)
                 ]);
-                document.getElementById('systemLoader').style.display = 'none';
-            } catch (e) {
-                alert("فشل تحميل النظام. تأكد من اتصال الإنترنت.");
-            }
+                document.getElementById('loaderOverlay').style.display = 'none';
+            } catch (e) { alert("فشل تحميل النظام. تأكد من الإنترنت."); }
         };
 
-        // 2. التحقق من المدخلات والموقع
-        function startSequence() {
-            const name = document.getElementById('inName').value.trim();
-            const id = document.getElementById('inID').value.trim();
+        // 2. التحقق من البيانات و GPS
+        function checkPermissions() {
+            const name = document.getElementById('inName').value;
+            const id = document.getElementById('inID').value;
             const btn = document.getElementById('btnInit');
-            const msg = document.getElementById('gpsMsg');
+            const gpsTxt = document.getElementById('gpsStatus');
 
-            if(name.length < 3 || id.length < 3) return alert("يرجى ملء البيانات بشكل صحيح");
+            if (name.length < 3 || id.length < 3) return alert("يرجى ملء البيانات بشكل صحيح");
 
             userData.name = name;
             userData.id = id;
-
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-satellite fa-spin"></i> جاري الاتصال بالقمر الصناعي...';
+            btn.innerHTML = 'جاري تحديد الموقع... <i class="fa-solid fa-spinner fa-spin"></i>';
 
-            if(navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        userData.lat = pos.coords.latitude;
-                        userData.lng = pos.coords.longitude;
-                        msg.innerText = "GPS LOCKED ✅";
-                        msg.style.color = "var(--success)";
-                        document.getElementById('debugGPS').innerText = `LOC: ${userData.lat.toFixed(4)}, ${userData.lng.toFixed(4)}`;
-                        launchCamera();
-                    },
-                    (err) => {
-                        btn.disabled = false;
-                        btn.innerHTML = 'إعادة المحاولة';
-                        msg.innerText = "❌ تعذر تحديد الموقع. الخدمة مطلوبة.";
-                        msg.style.color = "var(--error)";
-                    },
-                    { enableHighAccuracy: true }
-                );
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userData.lat = pos.coords.latitude;
+                    userData.lng = pos.coords.longitude;
+                    gpsTxt.innerHTML = '<i class="fa-solid fa-check-circle"></i> تم تحديد الموقع بنجاح';
+                    gpsTxt.style.color = "var(--success)";
+                    startCamera();
+                }, () => {
+                    btn.disabled = false;
+                    btn.innerHTML = 'إعادة المحاولة';
+                    alert("يجب تفعيل الموقع (GPS) للمتابعة!");
+                }, {enableHighAccuracy: true});
             } else { alert("جهازك لا يدعم GPS"); }
         }
 
-        // 3. تشغيل الكاميرا والمنطق الذكي
-        async function launchCamera() {
+        // 3. الكاميرا والذكاء الاصطناعي
+        async function startCamera() {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById('screenCam').classList.add('active');
+            document.getElementById('viewCamera').classList.add('active');
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
                 document.getElementById('videoElement').srcObject = stream;
-                startBrain();
-            } catch(e) { alert("الكاميرا مغلقة!"); location.reload(); }
+                startLogic();
+            } catch(e) { alert("الكاميرا محظورة! يرجى السماح بالوصول."); location.reload(); }
         }
 
-        function startBrain() {
+        function startLogic() {
             const video = document.getElementById('videoElement');
             const laser = document.getElementById('scanLaser');
-            const arrow = document.getElementById('arrowLeft');
-            const border = document.getElementById('camBorder');
-            const text = document.getElementById('camInstruction');
-            const title = document.getElementById('camStatus');
-            const counter = document.getElementById('camCounter');
+            const arrow = document.getElementById('arrowIcon');
+            const border = document.getElementById('camBox');
+            const hint = document.getElementById('camHint');
+            const pill = document.getElementById('liveStatus');
+            const counter = document.getElementById('camCount');
 
-            let step = 0; // 0=Detection, 1=Stable, 2=Action
+            let step = 0; // 0=Stable, 1=Twist
             let frames = 0;
             let timer = null;
 
             const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
 
-            const loop = setInterval(async () => {
+            setInterval(async () => {
                 if(video.paused || video.ended) return;
 
-                const det = await faceapi.detectSingleFace(video, opts)
-                                          .withFaceLandmarks()
-                                          .withFaceDescriptor()
-                                          .withFaceExpressions();
+                const det = await faceapi.detectSingleFace(video, opts).withFaceLandmarks().withFaceDescriptor().withFaceExpressions();
 
                 if(det) {
                     const nose = det.landmarks.getNose()[0];
                     const jaw = det.landmarks.getJawOutline();
                     const ratio = Math.abs(nose.x - jaw[0].x) / Math.abs(nose.x - jaw[16].x);
-                    
                     const diff = Math.abs(nose.x - lastNoseX);
                     lastNoseX = nose.x;
-                    const isStable = diff < 5;
+                    const isStable = diff < 5 && det.expressions.neutral > 0.7;
 
-                    // --- المنطق ---
-
-                    // 1. مرحلة الثبات (Scan)
+                    // 1. الثبات (Stability Check)
                     if(step === 0) {
-                        // وجه أمامي وثابت
                         if(ratio > 0.7 && ratio < 1.3 && isStable) {
                             frames++;
-                            border.className = "status-border st-scan";
-                            text.innerText = "جاري مسح الملامح...";
-                            laser.style.display = "block"; // تشغيل الليزر
-
+                            border.className = "scan-box mode-scan";
+                            laser.style.display = 'block';
+                            hint.innerText = "ممتاز.. خليك ثابت";
+                            hint.style.color = "var(--primary)";
+                            
                             if(frames > 5) {
-                                // وجه مقبول -> بدء العد
-                                document.getElementById('sScan').play();
+                                document.getElementById('sndBeep').play();
+                                step = 1;
                                 frames = 0;
-                                step = 1; // الانتقال للعد التنازلي
-                                
-                                let count = 3;
+                                let c = 3;
                                 counter.style.display = 'flex';
-                                text.innerText = "اثبت مكانك...";
+                                laser.style.display = 'none';
                                 
                                 timer = setInterval(() => {
-                                    counter.innerText = count;
-                                    count--;
-                                    if(count < 0) {
+                                    counter.innerText = c;
+                                    c--;
+                                    if(c < 0) {
                                         clearInterval(timer);
                                         counter.style.display = 'none';
-                                        userData.vector = Array.from(det.descriptor); // حفظ البصمة
+                                        userData.vector = Array.from(det.descriptor);
                                         
-                                        // الانتقال لمرحلة السهم
+                                        // الانتقال للالتفات
                                         step = 2;
-                                        laser.style.display = "none";
-                                        arrow.style.display = "block"; // ⬅️ إظهار السهم
-                                        document.getElementById('sBeep').play();
-                                        title.innerText = "اختبار الحيوية";
-                                        text.innerText = "انظر تجاه السهم";
-                                        text.style.color = "var(--warning)";
-                                        border.className = "status-border st-wait";
+                                        border.className = "scan-box mode-wait";
+                                        arrow.style.display = 'block'; // السهم يظهر يساراً
+                                        hint.innerHTML = 'التفت باتجاه السهم <i class="fa-solid fa-arrow-left"></i>';
+                                        hint.style.color = "var(--warning)";
+                                        pill.innerHTML = "اختبار الحيوية";
+                                        pill.style.color = "var(--warning)";
                                     }
                                 }, 800);
                             }
                         } else {
                             frames = 0;
-                            border.className = "status-border";
-                            text.innerText = "انظر للكاميرا مباشرة";
-                            laser.style.display = "none";
+                            border.className = "scan-box";
+                            laser.style.display = 'none';
+                            hint.innerText = "انظر للكاميرا مباشرة";
+                            hint.style.color = "#64748b";
                         }
                     }
 
-                    // 2. مرحلة الحركة (Look Left)
+                    // 2. الالتفات (Liveness Check)
                     else if(step === 2) {
-                        // إذا التفت لليسار (Ratio < 0.6)
-                        if(ratio < 0.6) {
-                            clearInterval(loop);
-                            arrow.style.display = "none";
-                            border.className = "status-border st-ok";
-                            title.innerText = "تم التحقق";
-                            text.innerText = "جاري رفع البيانات...";
-                            text.style.color = "var(--success)";
-                            document.getElementById('sSuccess').play();
-                            upload();
+                        if(ratio < 0.6) { // يسار
+                            border.className = "scan-box mode-done";
+                            arrow.style.display = 'none';
+                            hint.innerText = "تم التحقق!";
+                            hint.style.color = "var(--success)";
+                            step = 3; 
+                            sendData();
                         }
                     }
-
-                } else {
-                    // لا يوجد وجه
-                    border.className = "status-border";
-                    text.innerText = "ابحث عن وجه...";
-                    laser.style.display = "none";
                 }
             }, 200);
         }
 
-        // 4. الإرسال للسيرفر
-        function upload() {
+        // 4. الإرسال (مع كشف التكرار)
+        function sendData() {
             if(stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('liveStatus').innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> جاري الإرسال...';
 
             const payload = {
-                action: "register",
                 id: userData.id,
                 name: userData.name,
                 lat: userData.lat,
@@ -406,22 +398,32 @@
                 vector: JSON.stringify(userData.vector)
             };
 
-            fetch(CONFIG.sheetUrl, {
+            // نستخدم fetch عادي لأننا نريد قراءة الرد (JSON)
+            // هام: تأكد أنك قمت بعمل Deployment جديد للسكريبت ليسمح بـ CORS أو استخدم no-cors كخيار أخير
+            fetch(CONFIG.scriptUrl, {
                 method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
-            }).then(() => {
-                confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-                
-                document.getElementById('resName').innerText = userData.name;
-                document.getElementById('resTime').innerText = new Date().toLocaleTimeString('ar-EG');
-                
-                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                document.getElementById('screenSuccess').classList.add('active');
-            }).catch(e => alert("Network Error"));
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'duplicate' || data.status === 'error') {
+                    // نافذة التكرار
+                    document.getElementById('sndError').play();
+                    document.getElementById('modalDuplicate').style.display = 'flex';
+                } else {
+                    // نافذة النجاح
+                    document.getElementById('sndSuccess').play();
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    document.getElementById('modalSuccess').style.display = 'flex';
+                }
+            })
+            .catch(e => {
+                // في حالة وجود خطأ (أو CORS block)، نفترض النجاح المبدئي أو نعرض خطأ
+                console.error(e);
+                alert("تم الإرسال، ولكن تعذر قراءة رد السيرفر. تحقق من السجلات.");
+                location.reload();
+            });
         }
     </script>
 </body>
 </html>
-
