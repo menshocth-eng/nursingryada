@@ -4,23 +4,15 @@
 // متغيرات النظام
 // ==========================================
 const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-let userLat = "", userLng = "";
+let userLat = ""; 
+let userLng = "";
 let bestDescriptor = null;
 let lastNoseX = 0, lastNoseY = 0;
 let faceCheckInterval = null;
 let videoStream = null;
 
-// تحميل الموديلات عند فتح الصفحة
-Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-]).then(() => {
-    console.log("Face Models Loaded");
-}).catch(e => {
-    console.error("Failed to load Face-API models:", e);
-});
+// ❌ تمت إزالة التحميل التلقائي لنماذج Face-API.js لتجنب سباق الشروط ❌
+
 
 // ==========================================
 // دالة الانتقال من إدخال الآيدي إلى الكاميرا
@@ -65,22 +57,41 @@ function requestLocation() {
     }
 }
 
+// 🚀 الدالة المعدلة: تضمن تحميل الموديلات وانتظار بدء تشغيل الكاميرا 🚀
 async function startCameraSystem() {
     const videoEl = document.getElementById('videoElement');
     const statusText = document.getElementById('faceStatusText');
 
     try {
-        // طلب صلاحية الكاميرا الأمامية
+        // 🚨 الخطوة 1: تحميل النماذج وانتظار الاكتمال (للتزامن) 🚨
+        statusText.innerText = "جاري تحميل بيانات الذكاء الاصطناعي...";
+        
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+            faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+        ]);
+
+        // 🚨 الخطوة 2: طلب الكاميرا 🚨
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         videoStream = stream;
+        
+        // 🚨 الخطوة 3: انتظار بدء تشغيل الفيديو (مهم) 🚨
         videoEl.srcObject = stream;
+        await new Promise((resolve) => videoEl.onloadedmetadata = resolve);
+        
+        // الآن نبدأ منطق الكشف
         statusText.innerText = "اثبت مكانك تماماً.. لا تتحرك";
         startFaceLogic();
+        
     } catch (e) {
-        alert("يرجى السماح بصلاحية الكاميرا للمتابعة");
+        console.error("Camera or Model Load Failed:", e);
+        alert("يرجى السماح بصلاحية الكاميرا أو التحقق من اتصال الإنترنت (فشل تحميل النماذج).");
         cancelFaceAuth();
     }
 }
+
 
 function startFaceLogic() {
     const videoEl = document.getElementById('videoElement');
@@ -99,9 +110,9 @@ function startFaceLogic() {
         if(videoEl.paused || videoEl.ended) return;
 
         const det = await faceapi.detectSingleFace(videoEl, options)
-                          .withFaceLandmarks()
-                          .withFaceDescriptor()
-                          .withFaceExpressions();
+                            .withFaceLandmarks()
+                            .withFaceDescriptor()
+                            .withFaceExpressions();
 
         if (det) {
             const nose = det.landmarks.getNose()[0];
