@@ -11,7 +11,7 @@ let lastNoseX = 0, lastNoseY = 0;
 let faceCheckInterval = null;
 let videoStream = null;
 
-// ❌ تمت إزالة التحميل التلقائي لنماذج Face-API.js لتجنب سباق الشروط ❌
+// ❌ تمت إزالة التحميل التلقائي لنماذج Face-API.js لضمان التحكم في التوقيت ❌
 
 
 // ==========================================
@@ -74,13 +74,22 @@ async function startCameraSystem() {
         ]);
 
         // 🚨 الخطوة 2: طلب الكاميرا 🚨
+        statusText.innerText = "جاري تشغيل الكاميرا الأمامية...";
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         videoStream = stream;
         
-        // 🚨 الخطوة 3: انتظار بدء تشغيل الفيديو (مهم) 🚨
+        // 🚨 الخطوة 3: انتظار بدء تشغيل الفيديو (مهم لحل مشكلة 'لا يوجد وجه') 🚨
         videoEl.srcObject = stream;
-        await new Promise((resolve) => videoEl.onloadedmetadata = resolve);
+        await new Promise((resolve) => {
+            videoEl.onloadedmetadata = () => {
+                videoEl.play(); // التأكد من تشغيل الفيديو
+                resolve();
+            };
+        });
         
+        // 🚨 الخطوة 4: تأخير بسيط لضمان استقرار إطار الكشف 🚨
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // الآن نبدأ منطق الكشف
         statusText.innerText = "اثبت مكانك تماماً.. لا تتحرك";
         startFaceLogic();
