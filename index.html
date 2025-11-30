@@ -88,7 +88,7 @@
             font-weight: 700; 
             margin-bottom: 10px; 
             text-shadow: 0px 5px 15px rgba(14, 165, 233, 0.3);
-            font-family: 'Reem Kufi', sans-serif;
+            font-family: 'Reem Kufi', sans-serif; 
             letter-spacing: -1px;
         }
 
@@ -203,7 +203,6 @@
         .modern-input:focus { border-color: var(--primary); background: white; }
         .modern-input.locked { background: #f1f5f9; color: #64748b; text-align: center; font-weight: bold; cursor: not-allowed; letter-spacing: 1px; }
         
-        /* تعديل: حقل كلمة المرور مودرن وجميل */
         #adminPassword {
             background: rgba(255, 255, 255, 0.9);
             border: none;
@@ -292,7 +291,7 @@
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 99999999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); animation: fadeIn 0.3s ease-out; }
         
         .modal-box { background: rgba(255, 255, 255, 0.95); width: 85%; max-width: 320px; padding: 25px; border-radius: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); transform: scale(0.9); animation: popUp 0.3s; }
-        /* تصميم خاص لنافذة الموقع */
+        
         #locationForceModal .modal-box {
             border: none;
             background: rgba(255, 255, 255, 0.98);
@@ -314,7 +313,6 @@
         #connectionLostModal { z-index: 20000 !important; }
         #connectionLostModal .modal-box { border: 2px solid #ef4444; position: relative; }
         
-        /* تعديل: زر الإغلاق "X" للنوافذ */
         .btn-close-modal-x {
             position: absolute; top: 15px; left: 15px; 
             width: 30px; height: 30px; 
@@ -323,15 +321,13 @@
             cursor: pointer; color: #94a3b8; font-weight: bold; border: none;
         }
         
-        /* تعديل: الصورة بالأسفل أكثر وضوحاً وعائمة */
         .uni-watermark { 
             position: absolute; bottom: 0; left: 0; width: 100%; height: 320px; 
             background: url('https://a.top4top.io/p_36115ao3o1.jpg') no-repeat center bottom; 
             background-size: cover; 
-            opacity: 0.85; /* زيادة الوضوح */
+            opacity: 0.85; 
             pointer-events: none; z-index: 0; 
             mix-blend-mode: normal; 
-            /* تأثير التداخل العائم */
             -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
             mask-image: linear-gradient(to top, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
         }
@@ -957,19 +953,18 @@
             </div>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
         const CONFIG = {
-            sheetApiUrl: "https://script.google.com/macros/s/AKfycbxaZyXr1XisuqMroUlMO5TJGeJLz7-mbM09FoYtwdIyO_psIw7VZkMLz_8PnOnUhzAF/exec",
+            sheetApiUrl: "https://script.google.com/macros/s/AKfycbz5ywIwwwwVOEYSwA7Ldgxq-kkbpMBPJ6mnR-cvB5K2BzMXrXgw5Z-6rkMSDniW8qtI/exec",
             identitySheetUrl: "https://script.google.com/macros/s/AKfycbwBkId1lGwoHfuX6VrHSgqGOyDuYQ5rpMRDjP8Ysew_q34H3LvBHtiDzY8rBnFe6aB4WQ/exec",
             adminPassword: "RYADA",
             gps: { 
-                targetLat: 30.38583242213182, 
-                targetLong: 30.48886130751606, 
-                allowedDistanceKm: 1.25
-            },
+        targetLat: 30.38583242213182,  // خط العرض الجديد
+        targetLong: 30.48886130751606, // خط الطول الجديد
+        allowedDistanceKm: 1.25       // 1.25 كيلومتر (كيلو وربع)
+    },
             modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
         
@@ -1110,50 +1105,94 @@
                 renderSubjectsManage();
             }
         }
-        function updateNotificationUI(data) {
-            // التحقق من وجود خطر أو تنبيه
-            if (data.risk_level && data.risk_level !== "SAFE") {
+
+        // ==========================================
+        //  دالة المزامنة الجديدة (الوحيدة المضافة)
+        // ==========================================
+        async function syncGlobalAlerts() {
+            const btn = document.getElementById('notificationBtn');
+            try {
+                // جلب التنبيهات من السيرفر
+                const response = await fetch(`${CONFIG.sheetApiUrl}?action=getAlerts`);
+                const data = await response.json();
                 
-                // إذا كان الخطر شديد، نقوم بحظر الجهاز محلياً
-                if (data.risk_level === "DEVICE_SHARING" || data.risk_level === "HIGH_RISK" || data.risk_level === "FACE_SPOOF") {
-                    localStorage.setItem(BAN_KEY, "true");
+                if (data && Array.isArray(data)) {
+                    const serverAlerts = data.map(item => {
+                        let detailText = "تم اكتشاف حالة غير طبيعية.";
+                        if (item.risk_level === "DEVICE_SHARING") detailText = "تم استخدام نفس الجهاز لطالب آخر.";
+                        else if (item.risk_level === "FACE_SPOOF") detailText = "عدم تطابق بصمة الوجه مع الهوية.";
+                        else if (item.risk_level === "WRONG_LOCATION") detailText = "الطالب سجل خارج نطاق القاعة.";
+                        else if (item.risk_level.includes("LIMIT")) detailText = "تم حظر الطالب لتجاوز المحاولات.";
+                        
+                        return {
+                            name: item.name,
+                            id: item.id,
+                            timestamp: item.timestamp,
+                            risk_level: item.risk_level,
+                            reason: item.reason,
+                            detail: detailText,
+                            hall: item.hall,
+                            isRead: false
+                        };
+                    });
+
+                    if (serverAlerts.length > 0) {
+                        systemAlerts = serverAlerts;
+                        localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts));
+                        checkStoredAlerts(); // تحديث أيقونة الجرس
+                        showToast("تم تحديث التنبيهات من السيرفر", 2000, "#2563eb");
+                    }
+                }
+            } catch (e) {
+                console.error("Sync Error:", e);
+            }
+        }
+
+        function updateNotificationUI(data) {
+            if (data.isRepeat || data.isFar || data.risk_level) {
+                if (data.risk_level === "DEVICE_SHARING" || data.risk_level === "DUPLICATE_ENTRY" || data.isRepeat || data.risk_level === "FACE_SPOOF") {
+                    localStorage.setItem(BAN_KEY, "true"); 
                 }
 
-                // تجهيز النصوص للعرض
-                let reasonText = data.alert_msg || "تنبيه أمني"; // سيأتي النص المفصل من الشيت هنا (مثلاً: يبعد 60 متر)
-                let hallName = data.hall || "غير محدد";           // اسم القاعة القادم من الشيت
-                let riskColor = "#ef4444"; // أحمر افتراضي
-
-                // تحديد لون التنبيه بناءً على نوع الخطر
-                if (data.risk_level === "WARNING") {
-                    riskColor = "#f59e0b"; // برتقالي للمسافة
+                let reasonText = "نشاط مشبوه";
+                let detailText = "تم اكتشاف نشاط غير معتاد.";
+                
+                if (data.risk_level === "DEVICE_SHARING") {
+                    reasonText = "تكرار جهاز";
+                    detailText = "هذا الجهاز استخدم لطالب آخر.";
+                } else if (data.risk_level === "DUPLICATE_ENTRY" || data.isRepeat) {
+                    reasonText = "تسجيل مكرر";
+                    detailText = `الطالب مسجل بالفعل ${data.count || 1} مرات اليوم.`;
+                } else if (data.risk_level === "FACE_SPOOF") {
+                    reasonText = "انتحال وجه";
+                    detailText = "تطابق وجه مع طالب آخر.";
+                } else if (data.risk_level === "WRONG_LOCATION" || data.isFar) {
+                    reasonText = "خارج الموقع";
+                    detailText = `المسافة: ${Math.round(data.distance || 0)} متر عن القاعة.`;
                 }
 
                 const now = new Date();
-                const timeString = now.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+                const timeString = now.toLocaleTimeString('en-US');
+                const dateString = now.toLocaleDateString('en-GB');
 
-                // إنشاء كائن التنبيه
                 const newAlert = {
-                    name: attendanceData.name || 'طالب',
+                    name: attendanceData.name || 'مجهول',
                     id: attendanceData.uniID || '---',
-                    timestamp: timeString,
+                    timestamp: `${dateString} - ${timeString}`,
                     risk_level: data.risk_level,
-                    reason: reasonText, // السبب المفصل (مسافة / تكرار)
-                    hall: hallName,     // اسم القاعة
+                    reason: reasonText,
+                    detail: detailText,
+                    isRepeat: data.isRepeat,
+                    isFar: data.isFar,
+                    count: data.count,
+                    distance: data.distance,
+                    hall: data.hall || document.getElementById('hallSelect').value || 'غير محدد', 
                     isRead: false
                 };
                 
-                // إضافة التنبيه للمصفوفة وحفظه
                 systemAlerts.unshift(newAlert);
                 localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts));
-                
-                // تحديث واجهة الجرس فوراً
                 checkStoredAlerts();
-                
-                // تشغيل اهتزاز وصوت للتنبيه
-                if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                const btn = document.getElementById('notificationBtn');
-                btn.classList.add('has-alert');
             }
         }
 
@@ -1161,60 +1200,46 @@
             const btn = document.getElementById('notificationBtn');
             const container = document.getElementById('alertsListContainer');
             const isAdmin = sessionStorage.getItem(DOCTOR_MODE_KEY) === 'true';
-            
-            // إظهار زر الحذف فقط للمسؤول
-            const delBtn = document.getElementById('adminDeleteAlert');
-            if(delBtn) delBtn.style.display = isAdmin ? 'flex' : 'none';
+            document.getElementById('adminDeleteAlert').style.display = isAdmin ? 'flex' : 'none';
 
-            // فحص التنبيهات غير المقروءة لتشغيل ضوء الجرس
             const unreadCount = systemAlerts.filter(a => !a.isRead).length;
             if (unreadCount > 0) btn.classList.add('has-alert'); else btn.classList.remove('has-alert');
 
             if (systemAlerts.length > 0) {
                 let html = '';
                 systemAlerts.forEach((alert, index) => {
-                    const deleteIcon = isAdmin ? `<i class="fa-solid fa-trash-can" style="color:#ef4444; cursor:pointer; margin-left:10px;" onclick="deleteSingleAlert(${index}); event.stopPropagation();"></i>` : '';
+                    const deleteBtn = isAdmin ? `<i class="fa-solid fa-trash-can" style="color:#ef4444; cursor:pointer; margin-left:10px;" onclick="deleteSingleAlert(${index}); event.stopPropagation();"></i>` : '';
+                    let badgeColor = "#f59e0b"; 
+                    if (alert.reason === "تكرار جهاز" || alert.reason === "انتحال وجه" || alert.reason === "تسجيل مكرر") badgeColor = "#ef4444"; 
                     const itemClass = alert.isRead ? 'read-alert' : 'unread-alert';
-                    
-                    // تحديد أيقونة ولون حسب نوع التنبيه
-                    let iconStr = "⚠️";
-                    let colorStr = "#ef4444"; // أحمر
-                    if(alert.reason.includes("متر") || alert.risk_level === "WARNING") {
-                        iconStr = "📍"; // أيقونة الموقع
-                        colorStr = "#f59e0b"; // برتقالي
-                    } else if (alert.reason.includes("جهاز")) {
-                        iconStr = "📱";
-                    }
 
                     html += `
-                    <div class="${itemClass}" style="border-radius:12px; padding:12px; margin-bottom:8px; cursor:pointer; border:1px solid #e2e8f0; transition:0.2s;" onclick="toggleAlertDetails(${index})">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div class="${itemClass}" style="border-radius:12px; padding:10px; margin-bottom:8px; cursor:pointer; transition:0.3s;" onclick="toggleAlertDetails(${index})">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center;">
-                                ${deleteIcon}
-                                <div>
-                                    <div style="font-weight:900; font-size:13px; color:#1e293b;">${alert.name}</div>
-                                    <div class="en-font" style="font-size:11px; color:#64748b;">${alert.id}</div>
-                                </div>
+                                ${deleteBtn}
+                                <div style="font-weight:bold; font-size:13px;">${alert.name}</div>
                             </div>
-                            <div class="en-font" style="font-size:10px; color:#94a3b8; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${alert.timestamp}</div>
+                            <div class="en-font" style="font-size:10px; color:#94a3b8;">${alert.timestamp.split('-')[1] || ''}</div>
                         </div>
-                        
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
-                            <div style="font-size:11px; color:#0f766e; font-weight:800; background:#ccfbf1; padding:3px 8px; border-radius:6px;">
-                                🏛️ ${alert.hall}
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                            <div style="display:flex; flex-direction:column;">
+                                <div class="en-font" style="font-size:12px; color:#64748b;">${alert.id}</div>
+                                <div style="font-size:11px; color:#0f766e; font-weight:bold;">🏛️ ${alert.hall}</div>
                             </div>
-                            
-                            <div style="font-size:11px; color:${colorStr}; font-weight:bold; text-align:left; max-width:60%;">
-                                ${iconStr} ${alert.reason}
+                            <div style="text-align:left;">
+                                <span style="color:${badgeColor}; display:block; font-size:11px; font-weight:bold;">⚠️ ${alert.reason}</span>
                             </div>
+                        </div>
+                        <div id="alert-detail-${index}" style="display:none; border-top:1px dashed #e2e8f0; margin-top:8px; padding-top:8px; font-size:11px; color:#475569;">
+                            ${alert.detail}<br>
+                            التاريخ: <span class="en-font">${alert.timestamp}</span>
                         </div>
                     </div>
                     `;
                 });
                 container.innerHTML = html;
-            } else { 
-                container.innerHTML = '<div class="empty-state" style="padding:30px; text-align:center; color:#94a3b8;"><i class="fa-regular fa-bell-slash" style="font-size:30px; margin-bottom:10px;"></i><br>لا توجد تنبيهات</div>'; 
-            }
+            } else { container.innerHTML = '<div class="empty-state" style="padding:15px; font-size:12px;">لا توجد تنبيهات مسجلة.</div>'; }
         }
 
         function toggleAlertDetails(index) {
@@ -1506,6 +1531,9 @@
                 document.getElementById('adminDeleteAlert').style.display = 'flex'; notifBtn.classList.remove('locked');
                 if(adminBypassContainer) adminBypassContainer.style.display = 'block';
                 if(btnDataEntry) btnDataEntry.style.display = 'flex';
+                
+                // >>>>> المزامنة عند دخول المسؤول <<<<<
+                syncGlobalAlerts();
             } else {
                 badge.style.display = 'none'; loginBtn.style.display = 'flex'; logoutBtn.style.display = 'none'; reportBtn.classList.remove('unlocked'); reportBtn.classList.add('locked'); reportIcon.className = 'fa-solid fa-lock sub-btn-icon'; adminFloating.style.display = 'none'; 
                 document.getElementById('adminDeleteAlert').style.display = 'none'; notifBtn.classList.add('locked');
@@ -1701,12 +1729,8 @@
                             try {
                                 const response = await fetch(CONFIG.identitySheetUrl, { method: 'POST', mode: 'cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) });
                                 const result = await response.json();
-                                updateNotificationUI(result); // هنا يمرر السيرفر البيانات الجديدة للجرس
-                                
-                                if (result.system_data && result.system_data.risk_level === 'HIGH_RISK') {
-                                     localStorage.setItem(BAN_KEY, "true"); document.getElementById('banModal').style.display = 'flex'; return;
-                                }
-
+                                updateNotificationUI(result);
+                                if (result.count >= 3) { localStorage.setItem(BAN_KEY, "true"); document.getElementById('banModal').style.display = 'flex'; return; }
                                 attendanceData.isVerified = true; const verifyBtn = document.getElementById('btnVerify'); verifyBtn.innerHTML = '<i class="fa-solid fa-check-double"></i> تم التحقق من الهوية'; verifyBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)'; verifyBtn.classList.add('disabled'); switchScreen('screenScanQR'); playSuccess(); showToast('تم التحقق من هويتك بنجاح', 3000, '#10b981'); checkAllConditions(); 
                             } catch(err) { console.log(err); showToast('تم التحقق محلياً (تعذر الاتصال بالسيرفر)', 3000, '#f59e0b'); attendanceData.isVerified = true; switchScreen('screenScanQR'); }
                         } else { camBorder.className = "cam-container status-wait"; statusTxt.innerText = "بص يمين يا قمر"; statusTxt.style.color = "var(--warning)"; alertBadge.style.display = "none"; }
@@ -1744,6 +1768,7 @@
             document.getElementById('receiptID').innerText = attendanceData.uniID; 
             document.getElementById('receiptSubject').innerText = selectedSubject; 
             document.getElementById('receiptHall').innerText = selectedHall || 'N/A'; 
+            // Force English Date and Time in Receipt
             document.getElementById('receiptDate').innerText = now.toLocaleDateString('en-GB'); 
             document.getElementById('receiptTime').innerText = now.toLocaleTimeString('en-US', {hour12: true, hour: '2-digit', minute:'2-digit'});
             
@@ -1766,28 +1791,12 @@
             formParams.append("deviceId", deviceId);
             
             try {
-                // إزالة no-cors وقراءة الرد
-                const response = await fetch(CONFIG.sheetApiUrl, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-                    body: formParams.toString() 
-                });
-                
-                const result = await response.json();
-                
-                // تمرير البيانات لنظام التنبيهات
-                if (result.system_data) {
-                    updateNotificationUI(result.system_data);
-                }
-
+                await fetch(CONFIG.sheetApiUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formParams.toString() });
                 processIsActive = false; releaseWakeLock();
+                
                 resetApplicationState();
                 switchScreen('screenSuccess'); playSuccess(); confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#0ea5e9', '#10b981'] });
-            } catch (error) { 
-                console.error(error);
-                // في حالة الخطأ الشديد، نعود للواجهة
-                btn.innerHTML = originalText; btn.disabled = false; showConnectionLostModal(); 
-            }
+            } catch (error) { btn.innerHTML = originalText; btn.disabled = false; showConnectionLostModal(); }
         }
 
         function addKey(num) { playClick(); const i = document.getElementById('uniID'); if(i.value.length<10) i.value+=num; }
@@ -1881,11 +1890,13 @@
         
         async function openReportModal() {
             playClick(); document.getElementById('reportModal').style.display = 'flex'; showSubjectsView();
+            // استخدام صيغة التاريخ المطابقة لسكربت جوجل (dd/MM/yyyy)
             const d = new Date().toLocaleDateString('en-GB'); 
             document.getElementById('reportDateDisplay').innerText = d;
             const container = document.getElementById('subjectsContainer');
             container.innerHTML = `<div style="text-align:center; padding:50px 20px;"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:30px; color:var(--primary); margin-bottom:15px;"></i><div style="font-weight:bold; color:#64748b;">جاري جلب المواد...</div></div>`;
             try {
+                // جلب البيانات مع التاريخ كفلتر
                 const response = await fetch(`${CONFIG.sheetApiUrl}?action=getReport&date=${encodeURIComponent(d)}`);
                 const data = await response.json();
                 if (!data || data.length === 0) { container.innerHTML = `<div class="empty-state" style="margin-top:50px;"><i class="fa-solid fa-folder-open" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i><br>لا توجد سجلات اليوم.</div>`; return; }
@@ -1922,6 +1933,7 @@
                 const studentName = item.name || "غير معروف";
                 const studentID = item.uniID || "---";
                 const timeStr = item.time || "--:--";
+                // تعديل: عرض التاريخ (المفترض أن السكربت يرجعه، أو نستخدم تاريخ اليوم إذا لم يتوفر)
                 const dateStr = item.date || new Date().toLocaleDateString('en-GB');
                 
                 html += `
