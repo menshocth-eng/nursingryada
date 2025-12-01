@@ -19,6 +19,25 @@
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <style>
+        /* === إصلاح مشكلة ظهور عناصر فوق الكارت === */
+        #toastNotification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 25px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 800;
+            z-index: 9999999; /* رقم عالي جداً ليظهر فوق الكل */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            font-size: 13px;
+            display: none; /* مخفي افتراضياً */
+            min-width: 250px;
+            text-align: center;
+            font-family: 'Cairo', sans-serif;
+        }
+
         /* === الأساسيات === */
         #desktop-blocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; color: #ef4444; z-index: 2147483647; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-family: 'Cairo'; }
         :root { --primary: #0ea5e9; --primary-dark: #0284c7; --text-main: #1e293b; --text-sub: #64748b; --glass-bg: rgba(255, 255, 255, 0.95); --danger: #ef4444; --success: #10b981; --warning: #f59e0b; }
@@ -265,8 +284,6 @@
             outline: none;
         }
 
-        /* (باقي التنسيقات كما هي... اختصاراً للحجم) */
-        /* ... */
         .custom-select-wrapper { position: relative; user-select: none; width: 100%; margin-bottom: 20px; -webkit-tap-highlight-color: transparent; }
         .custom-select-label { display: block; text-align: right; margin-bottom: 8px; font-size: 13px; color: #475569; font-weight: 800; margin-right: 5px; }
         .custom-select-trigger { position: relative; display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 18px 20px; font-size: 15px; font-weight: 700; color: #334155; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02); }
@@ -331,6 +348,7 @@
         .scan-success-badge { background: #ecfdf5; color: #10b981; border: 1px solid #d1fae5; padding: 15px; border-radius: 15px; font-weight: 700; font-size: 14px; display: none; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; animation: popUp 0.4s; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 99999999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); animation: fadeIn 0.3s ease-out; }
         .modal-box { background: rgba(255, 255, 255, 0.95); width: 85%; max-width: 320px; padding: 25px; border-radius: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2); transform: scale(0.9); animation: popUp 0.3s; }
+        #locationForceModal { z-index: 999999999 !important; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(5px); }
         #locationForceModal .modal-box { border: none; background: rgba(255, 255, 255, 0.98); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); max-width: 300px; position: relative; }
         #locationForceModal .modal-title { color: #334155; margin-bottom: 5px; }
         #locationForceModal i { color: #f59e0b !important; font-size: 40px; margin-bottom: 15px; }
@@ -374,7 +392,6 @@
         #studentSearchInput, #alertSearchInput { padding-right: 40px; border-radius: 20px; background: #f1f5f9; border: 1px solid #e2e8f0; width: 100%; padding: 12px 40px 12px 15px; font-family: 'Cairo'; font-size: 14px; outline: none; }
         #notificationBtn { position: absolute; top: 35px; left: 35px; z-index: 500; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); cursor: pointer; color: #64748b; transition: all 0.3s ease; font-size: 22px; }
         #notificationBtn.has-alert { color: #ef4444; background: #fff1f2; animation: pulse-red 2s infinite; }
-        #locationForceModal { z-index: 999999999 !important; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(5px); }
         #modernConfirmModal { z-index: 2147483647 !important; }
         .attempts-hearts { display: flex; gap: 5px; align-items: center; justify-content: center; background: rgba(255,255,255,0.8); padding: 8px 15px; border-radius: 20px; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .heart-icon { font-size: 18px; color: #ef4444; transition: 0.3s; }
@@ -406,11 +423,6 @@
             <div style="margin-top:15px;"><i class="fa-solid fa-circle-notch fa-spin" style="color:var(--primary);"></i></div>
         </div>
     </div>
-    ```
-
-### الجزء الثاني (باقي الـ HTML + السكربت المحدث بالكامل)
-
-```html
     <div id="desktop-blocker">
         <i class="fa-solid fa-mobile-screen-button" style="font-size:50px; margin-bottom:20px;"></i>
         <h2 style="margin-bottom:10px">عذراً، وصول غير مصرح به</h2>
@@ -665,7 +677,7 @@
         </div>
     </div>
     
-    <div id="toastNotification" style="display:none;"></div> 
+    <div id="toastNotification"></div> 
 
     <div id="adminFloatingBack" class="admin-floating-back" onclick="goBackToWelcome()">
         <i class="fa-solid fa-arrow-right"></i>
@@ -960,7 +972,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
         const CONFIG = {
-            // الروابط الموزعة الأربعة
+            // الروابط الموزعة الأربعة (تم التحديث)
             apiUrls: {
                 year1_part1: "https://script.google.com/macros/s/AKfycbxkmWyMm23ii2JQayIehRYXqAPQGdrf_J4l3_8AYin89n1u8cfaJNF7-3dUTG7zU3981g/exec",
                 year1_part2: "https://script.google.com/macros/s/AKfycbzMKqPJHnO1N9iSmbCeYbu1eCKQwEPP4HflX0LgY3o76DvhpyPlVitNQpSZtIFNUAy0/exec",
@@ -968,7 +980,9 @@
                 year2_part2: "https://script.google.com/macros/s/AKfycbyHYwfYrY39F99P7TsNGkPfW5GKJZsD4x5OsIqDXUkMDMSOvFjv3W_wuBGfAkH0emo4/exec"
             },
             
-            // رابط شيت الهوية (ممنوع التغيير)
+            // رابط ملف الأسماء فقط (استخدمت الرابط الأول كخادم افتراضي لجلب الأسماء)
+            sheetApiUrl: "https://script.google.com/macros/s/AKfycbxkmWyMm23ii2JQayIehRYXqAPQGdrf_J4l3_8AYin89n1u8cfaJNF7-3dUTG7zU3981g/exec",
+            
             identitySheetUrl: "https://script.google.com/macros/s/AKfycbwx09rtHtsefAcu-09Bn5boBsLKGpivHgFcpYcnwSQIaSLja-wRzq3PLgAHTCx2te2E/exec",
             
             adminPassword: "RYADA",
@@ -1007,8 +1021,7 @@
             try { studentsDB = JSON.parse(savedDB); } catch(e) {}
         }
         
-        // جلب الأسماء من الرابط الأول افتراضياً
-        fetch(CONFIG.apiUrls.year1_part1).then(r => r.json()).then(d => { if(!d.error) { studentsDB = d; localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(d)); } }).catch(e => console.log("DB Fetch Error"));
+        fetch(CONFIG.sheetApiUrl).then(r => r.json()).then(d => { if(!d.error) { studentsDB = d; localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(d)); } }).catch(e => console.log("DB Fetch Error"));
 
         let defaultSubjects = {
             "first_year": [
@@ -1041,7 +1054,7 @@
                 "الكتابة التقنية"
             ]
         };
-        // تم تغيير المفتاح إلى v4 لفرض التحديث
+        // تم تغيير المفتاح إلى v4
         let subjectsData = JSON.parse(localStorage.getItem('subjectsData_v4')) || defaultSubjects;
 
         let defaultHalls = [
@@ -1049,7 +1062,7 @@
             "E334", "E335", "E336", "E337", "E344", "E345", "E346", "E347",
             "E240", "E241", "E242", "E245", "E231", "E230", "E243", "E233", "E222", "E234"
         ];
-        // تم تغيير المفتاح إلى v4 لفرض التحديث
+        // تم تغيير المفتاح إلى v4
         let hallsList = JSON.parse(localStorage.getItem('hallsList_v4')) || defaultHalls;
 
         const DOCTOR_MODE_KEY = "is_doctor_bypass_enabled";
@@ -2010,7 +2023,10 @@
             document.getElementById('reportModal').style.display = 'flex';
             showSubjectsView();
 
-            const d = new Date().toLocaleDateString('en-GB'); 
+            const now = new Date();
+            // إصلاح مشكلة التاريخ: فرض صيغة dd/MM/yyyy الإنجليزية
+            const d = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth()+1)).slice(-2) + '/' + now.getFullYear();
+            
             document.getElementById('reportDateDisplay').innerText = d;
             
             const container = document.getElementById('subjectsContainer');
@@ -2082,7 +2098,7 @@
                 const studentName = item.name || "غير معروف";
                 const studentID = item.uniID || "---";
                 const timeStr = item.time || "--:--";
-                const dateStr = item.date || new Date().toLocaleDateString('en-GB'); // في حالة البيانات المجمعة قد لا يأتي التاريخ، نستخدم اليوم
+                const dateStr = item.date || new Date().toLocaleDateString('en-GB'); 
                 
                 html += `
                     <div class="student-detailed-card">
