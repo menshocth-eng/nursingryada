@@ -769,6 +769,17 @@
                     <p>يرجى السماح للمتصفح بتحديد موقعك الجغرافي.</p>
                 </div>
 
+                <div id="screenReadyToStart" class="section">
+                    <div style="margin: 30px 0;">
+                        <i class="fa-solid fa-map-location-dot" style="font-size: 60px; color: #10b981; animation: popUp 0.5s;"></i>
+                    </div>
+                    <h1 style="color: #10b981;">الموقع مطابق</h1>
+                    <p>تم التحقق من تواجدك في الكلية بنجاح.</p>
+                    <button onclick="generateCodeAndShowDataEntry()" class="btn-main" style="margin-top: 20px;">
+                        سجل الآن <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </div>
+
                 <div id="screenDataEntry" class="section">
                     <div class="circular-timer">
                         <svg class="timer-svg" viewBox="0 0 80 80">
@@ -807,6 +818,29 @@
                     
                     <button type="button" onclick="handleIdSubmit()" class="btn-main" id="nextStepBtn" style="margin-top:20px;">التالي <i class="fa-solid fa-arrow-left"></i></button>
                 </div>
+                <style>
+                    .btn-google-maps { 
+                        background: #ffffff; 
+                        color: #3c4043; 
+                        width: 100%; 
+                        padding: 12px 15px; 
+                        border-radius: 16px; 
+                        border: 1px solid #e2e8f0; 
+                        font-size: 13px; 
+                        font-weight: 700; 
+                        font-family: 'Cairo'; 
+                        cursor: pointer; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        gap: 12px; 
+                        margin-bottom: 15px; 
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                        transition: all 0.2s; 
+                    }
+                    .btn-google-maps:active { transform: scale(0.97); background: #f8fafc; }
+                    .maps-icon-img { width: 24px; height: 24px; object-fit: contain; }
+                </style>
 
                 <div id="screenFaceCheck" class="section">
                     <h1>التعرف على الهوية</h1>
@@ -913,6 +947,11 @@
                         </select>
                     </div>
 
+                    <button onclick="openMapsToRefreshGPS()" class="btn-google-maps">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/aa/Google_Maps_icon_%282020%29.svg" class="maps-icon-img" alt="Maps">
+                        <span>اضغط هنا لتنشيط الموقع (GPS)</span>
+                    </button>
+
                     <button onclick="safeClick(this, startFaceVerificationProcess)" class="btn-verify-identity" id="btnVerify">
                         <i class="fa-solid fa-fingerprint"></i> التحقق من الهوية
                     </button>
@@ -972,19 +1011,14 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
         const CONFIG = {
-            // الروابط الموزعة الأربعة (تم التحديث)
             apiUrls: {
                 year1_part1: "https://script.google.com/macros/s/AKfycbyHYwfYrY39F99P7TsNGkPfW5GKJZsD4x5OsIqDXUkMDMSOvFjv3W_wuBGfAkH0emo4/exec",
                 year1_part2: "https://script.google.com/macros/s/AKfycbxHwoJyBtdRU5Zl1BLFOrk22dlAz4siiuZeuRone1zeQR98R5mgs3IHyCG6-yAacIKLgQ/exec",
                 year2_part1: "https://script.google.com/macros/s/AKfycbzMKqPJHnO1N9iSmbCeYbu1eCKQwEPP4HflX0LgY3o76DvhpyPlVitNQpSZtIFNUAy0/exec",
                 year2_part2: "https://script.google.com/macros/s/AKfycbykt_5EKnjYX5Ub3caCtPP6ChY679Pvu1MneHqGMSxvzWvr909SjDRkIVnhsaZD9VRQyg/exec"
             },
-            
-            // رابط ملف الأسماء فقط (استخدمت الرابط الأول كخادم افتراضي لجلب الأسماء)
             sheetApiUrl: "https://script.google.com/macros/s/AKfycbxkmWyMm23ii2JQayIehRYXqAPQGdrf_J4l3_8AYin89n1u8cfaJNF7-3dUTG7zU3981g/exec",
-            
             identitySheetUrl: "https://script.google.com/macros/s/AKfycbwx09rtHtsefAcu-09Bn5boBsLKGpivHgFcpYcnwSQIaSLja-wRzq3PLgAHTCx2te2E/exec",
-            
             adminPassword: "RYADA",
             gps: { 
                 targetLat: 30.385820708310472,  
@@ -994,14 +1028,7 @@
             modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
         
-        // المواد التي ستذهب للمجموعة أ (الروابط رقم 1)
-        const GROUP_A_SUBJECTS = [
-            "اساسيات تمريض 1 نظري", "اساسيات تمريض 1 عملي",
-            "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى",
-            "اناتومى نظرى", "اناتومى عملى",
-            "تمريض حالات حرجة 1 نظرى", "تمريض حالات حرجة 1 عملى"
-        ];
-
+        const GROUP_A_SUBJECTS = ["اساسيات تمريض 1 نظري", "اساسيات تمريض 1 عملي", "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى", "اناتومى نظرى", "اناتومى عملى", "تمريض حالات حرجة 1 نظرى", "تمريض حالات حرجة 1 عملى"];
         const LOCAL_STORAGE_DB_KEY = "offline_students_db_v2";
         const ALERT_STORAGE_KEY = "persistent_student_alerts_v2";
         const DEVICE_ID_KEY = "unique_device_id_v1"; 
@@ -1024,45 +1051,12 @@
         fetch(CONFIG.sheetApiUrl).then(r => r.json()).then(d => { if(!d.error) { studentsDB = d; localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(d)); } }).catch(e => console.log("DB Fetch Error"));
 
         let defaultSubjects = {
-            "first_year": [
-                // === النص الأول ===
-                "اساسيات تمريض 1 نظري",
-                "اساسيات تمريض 1 عملي",
-                "تمريض بالغين 1 نظرى",
-                "تمريض بالغين 1 عملى",
-                "اناتومى نظرى",
-                "اناتومى عملى",
-                
-                // === النص الثاني ===
-                "تقييم صحى نظرى",
-                "تقييم صحى عملى",
-                "مصطلحات طبية",
-                "فسيولوجى",
-                "تكنولوجيا المعلومات"
-            ],
-            "second_year": [
-                // === النص الأول ===
-                "تمريض بالغين 1 نظرى",
-                "تمريض بالغين 1 عملى",
-                "تمريض حالات حرجة 1 نظرى",
-                "تمريض حالات حرجة 1 عملى",
-                
-                // === النص الثاني ===
-                "امراض باطنة",
-                "باثولوجى",
-                "علم الأدوية",
-                "الكتابة التقنية"
-            ]
+            "first_year": ["اساسيات تمريض 1 نظري", "اساسيات تمريض 1 عملي", "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى", "اناتومى نظرى", "اناتومى عملى", "تقييم صحى نظرى", "تقييم صحى عملى", "مصطلحات طبية", "فسيولوجى", "تكنولوجيا المعلومات"],
+            "second_year": ["تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى", "تمريض حالات حرجة 1 نظرى", "تمريض حالات حرجة 1 عملى", "امراض باطنة", "باثولوجى", "علم الأدوية", "الكتابة التقنية"]
         };
-        // تم تغيير المفتاح إلى v4
         let subjectsData = JSON.parse(localStorage.getItem('subjectsData_v4')) || defaultSubjects;
 
-        let defaultHalls = [
-            "037", "038", "039", "019", "025", "123", "124", "127", "131", "132", "133", "134", "231", "335", "121", "118",
-            "E334", "E335", "E336", "E337", "E344", "E345", "E346", "E347",
-            "E240", "E241", "E242", "E245", "E231", "E230", "E243", "E233", "E222", "E234"
-        ];
-        // تم تغيير المفتاح إلى v4
+        let defaultHalls = ["037", "038", "039", "019", "025", "123", "124", "127", "131", "132", "133", "134", "231", "335", "121", "118", "E334", "E335", "E336", "E337", "E344", "E345", "E346", "E347", "E240", "E241", "E242", "E245", "E231", "E230", "E243", "E233", "E222", "E234"];
         let hallsList = JSON.parse(localStorage.getItem('hallsList_v4')) || defaultHalls;
 
         const DOCTOR_MODE_KEY = "is_doctor_bypass_enabled";
@@ -1172,9 +1166,6 @@
             }
         }
 
-        // ==========================================
-        //  مزامنة التنبيهات (نافذة علوية صغيرة)
-        // ==========================================
         async function syncGlobalAlerts() {
             const btn = document.getElementById('notificationBtn');
             try {
@@ -1201,7 +1192,7 @@
                         systemAlerts = serverAlerts;
                         localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts));
                         checkStoredAlerts(); 
-                        showTopToast("تم تحديث التنبيهات الأمنية"); // النافذة العلوية الجديدة
+                        showTopToast("تم تحديث التنبيهات الأمنية");
                     }
                 }
             } catch (e) {
@@ -1471,10 +1462,10 @@
             if (screenId !== 'screenWelcome') {
                 wrapper.classList.add('show-icon');
                 if (screenId === 'screenLoading') { icon.className = "fa-solid fa-satellite-dish hero-icon fa-spin"; icon.style.color = "var(--primary)"; }
+                else if (screenId === 'screenReadyToStart') { icon.className = "fa-solid fa-map-location-dot hero-icon"; icon.style.color = "#10b981"; icon.style.animation = "none"; }
                 else if (screenId === 'screenDataEntry') { icon.className = "fa-solid fa-user-pen hero-icon"; icon.style.color = "var(--primary)"; icon.style.animation = "none"; }
                 else if (screenId === 'screenScanQR') { icon.className = "fa-solid fa-qrcode hero-icon"; icon.style.color = "var(--primary)"; icon.style.animation = "none"; }
                 else if (screenId === 'screenFaceCheck') { 
-                    // أيقونة الهوية في الدائرة البيضاء
                     icon.className = "fa-solid fa-id-card-clip hero-icon"; 
                     icon.style.color = "var(--primary)"; icon.style.animation = "none"; 
                 }
@@ -1485,7 +1476,7 @@
         }
 
         function switchScreen(id) {
-            window.scrollTo({ top: 0, behavior: 'smooth' }); // التمرير للأعلى تلقائياً
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
             const allSections = document.querySelectorAll('.section');
             const nextScreen = document.getElementById(id);
             allSections.forEach(el => { if (el.classList.contains('active')) el.classList.remove('active'); });
@@ -1513,6 +1504,13 @@
                 flake.style.fontSize = Math.random() * 10 + 10 + 'px';
                 container.appendChild(flake);
             }
+        }
+
+        function openMapsToRefreshGPS() {
+            const lat = CONFIG.gps.targetLat;
+            const lng = CONFIG.gps.targetLong;
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            window.open(mapsUrl, '_blank');
         }
 
         window.onload = function() {
@@ -1561,7 +1559,7 @@
             if (navigator.geolocation) {
                 geo_watch_id = navigator.geolocation.watchPosition(
                     (position) => { userLat = position.coords.latitude; userLng = position.coords.longitude; },
-                    (error) => { }, { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                    (error) => { }, { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
                 );
             }
         }
@@ -1599,7 +1597,7 @@
                     navigator.geolocation.getCurrentPosition(
                         (pos) => { userLat = pos.coords.latitude; userLng = pos.coords.longitude; checkDistance(onSuccess); },
                         (err) => { document.getElementById('locationForceModal').style.display = 'flex'; },
-                        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                        { enableHighAccuracy: false, maximumAge: 30000, timeout: 15000 }
                     );
                 } else { document.getElementById('locationForceModal').style.display = 'flex'; }
             } else { checkDistance(onSuccess); }
@@ -1617,7 +1615,10 @@
             resetApplicationState();
             if (sessionStorage.getItem(DOCTOR_MODE_KEY) === 'true') { generateCodeAndShowDataEntry(); return; }
             switchScreen('screenLoading');
-            checkLocationStrict(() => { generateCodeAndShowDataEntry(); });
+            checkLocationStrict(() => { 
+                switchScreen('screenReadyToStart'); 
+                playSuccess();
+            });
         }
 
         function generateCodeAndShowDataEntry() {
@@ -1837,7 +1838,7 @@
                     navigator.geolocation.getCurrentPosition(
                         (pos) => { userLat = pos.coords.latitude; userLng = pos.coords.longitude; submitToGoogle(); },
                         (err) => { document.getElementById('locationForceModal').style.display = 'flex'; },
-                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                        { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
                     );
                 } else { document.getElementById('locationForceModal').style.display = 'flex'; }
                 return;
@@ -1858,27 +1859,23 @@
             const isOnline = await checkRealConnection(); 
             if (!isOnline) { btn.innerHTML = originalText; btn.disabled = false; showConnectionLostModal(); return; }
             
-            // ============================================================
-            // 🧠 التوجيه الذكي (Routing Logic)
-            // ============================================================
             let targetUrl = "";
             
             if (selectedYear === "first_year") {
                 if (GROUP_A_SUBJECTS.includes(selectedSubject)) {
-                    targetUrl = CONFIG.apiUrls.year1_part1; // سيرفر 1
+                    targetUrl = CONFIG.apiUrls.year1_part1;
                 } else {
-                    targetUrl = CONFIG.apiUrls.year1_part2; // سيرفر 2
+                    targetUrl = CONFIG.apiUrls.year1_part2;
                 }
             } else if (selectedYear === "second_year") {
                 if (GROUP_A_SUBJECTS.includes(selectedSubject)) {
-                    targetUrl = CONFIG.apiUrls.year2_part1; // سيرفر 3
+                    targetUrl = CONFIG.apiUrls.year2_part1;
                 } else {
-                    targetUrl = CONFIG.apiUrls.year2_part2; // سيرفر 4
+                    targetUrl = CONFIG.apiUrls.year2_part2;
                 }
             } else {
-                targetUrl = CONFIG.apiUrls.year1_part1; // احتياطي
+                targetUrl = CONFIG.apiUrls.year1_part1;
             }
-            // ============================================================
             
             const now = new Date(); 
             document.getElementById('receiptName').innerText = attendanceData.name; 
@@ -1905,7 +1902,6 @@
             formParams.append("deviceId", deviceId);
             
             try {
-                // الإرسال للرابط المحدد ديناميكياً
                 await fetch(targetUrl, { 
                     method: 'POST', 
                     mode: 'no-cors', 
@@ -2015,16 +2011,12 @@
             if (!isMobileDevice()) { document.getElementById('desktop-blocker').style.display = 'flex'; document.body.style.overflow = 'hidden'; throw new Error("Desktop access denied."); }
         }
         
-        // ============================================================
-        // دالة عرض التقرير المجمّع (Aggregated Report)
-        // ============================================================
         async function openReportModal() {
             playClick();
             document.getElementById('reportModal').style.display = 'flex';
             showSubjectsView();
 
             const now = new Date();
-            // إصلاح مشكلة التاريخ: فرض صيغة dd/MM/yyyy الإنجليزية
             const d = ('0' + now.getDate()).slice(-2) + '/' + ('0' + (now.getMonth()+1)).slice(-2) + '/' + now.getFullYear();
             
             document.getElementById('reportDateDisplay').innerText = d;
@@ -2036,7 +2028,6 @@
             </div>`;
 
             try {
-                // 1. تحديد الروابط الأربعة
                 const urls = [
                     `${CONFIG.apiUrls.year1_part1}?action=getReport&date=${encodeURIComponent(d)}`,
                     `${CONFIG.apiUrls.year1_part2}?action=getReport&date=${encodeURIComponent(d)}`,
@@ -2044,10 +2035,7 @@
                     `${CONFIG.apiUrls.year2_part2}?action=getReport&date=${encodeURIComponent(d)}`
                 ];
 
-                // 2. إرسال الطلبات الأربعة في وقت واحد
                 const responses = await Promise.all(urls.map(url => fetch(url).then(res => res.json()).catch(e => [])));
-
-                // 3. دمج النتائج
                 let allData = [].concat(...responses);
 
                 if (!allData || allData.length === 0) {
@@ -2058,7 +2046,6 @@
                     return;
                 }
 
-                // 4. ترتيب البيانات زمنياً (الأحدث أولاً) وعرضها
                 allData.reverse(); 
                 cachedReportData = allData; 
                 renderSubjectsList(allData); 
@@ -2149,7 +2136,6 @@
             showModernConfirm("حذف سجل", "سيتم حذف الطالب من جميع السيرفرات. هل أنت متأكد؟", async function() {
                 const card = btn.closest('.student-detailed-card'); btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
                 try {
-                    // محاولة الحذف من الـ 4 سيرفرات لضمان الحذف
                     const urls = [
                         `${CONFIG.apiUrls.year1_part1}`, `${CONFIG.apiUrls.year1_part2}`,
                         `${CONFIG.apiUrls.year2_part1}`, `${CONFIG.apiUrls.year2_part2}`
@@ -2205,6 +2191,3 @@
     </script> 
 </body>
 </html>
-
-
-
