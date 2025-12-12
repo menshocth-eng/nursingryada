@@ -1,19 +1,35 @@
 export default async function handler(req, res) {
-    // 1. استحضار رابط جوجل شيت من الخزنة (لأنه طويل ويجب إخفاؤه)
-    const SECRET_URL = process.env.MY_GOOGLE_SHEET;
+    // 1. استحضار الروابط من خزنة Vercel
+    const ATTENDANCE_SHEET = process.env.MY_GOOGLE_SHEET;   // شيت الحضور
+    const IDENTITY_SHEET = process.env.MY_IDENTITY_SHEET;   // شيت الهوية
+    const ADMIN_PASS = "RYADANUR1"; // كلمة سر المسؤول
 
-    // 2. كلمة السر محفوظة هنا داخل السيرفر مباشرة (أمان تام)
-    const ADMIN_PASS = "RYADANUR1";
-
-    // التأكد من وجود الرابط السري
-    if (!SECRET_URL) return res.status(500).json({ error: 'Server Setup Error' });
+    // التأكد من أن الروابط موجودة
+    if (!ATTENDANCE_SHEET || !IDENTITY_SHEET) {
+        return res.status(500).json({ error: 'Server Setup Error: Missing Sheets URLs' });
+    }
 
     try {
+        // 2. معرفة نوع العملية المطلوبة (Action)
+        let action = req.body.action;
+        if (req.method === 'GET') {
+            action = req.query.action;
+        }
+
+        // 3. تحديد الوجهة (Default: شيت الحضور)
+        let targetUrl = ATTENDANCE_SHEET;
+
+        // قائمة العمليات التي يجب أن تذهب لشيت الهوية
+        const identityActions = ['login_admin', 'getAlerts', 'register_identity'];
+        
+        if (identityActions.includes(action)) {
+            targetUrl = IDENTITY_SHEET;
+        }
+
         // ============================================================
-        // السيناريو الأول: طلب تسجيل دخول المسؤول (Login)
+        // 4. معالجة خاصة لـ "دخول المسؤول" (للحماية الإضافية)
         // ============================================================
-        // هنا السيرفر بيرد بنفسه مش بيكلم جوجل شيت
-        if (req.method === 'POST' && req.body.action === 'login_admin') {
+        if (req.method === 'POST' && action === 'login_admin') {
             if (req.body.password === ADMIN_PASS) {
                 return res.status(200).json({ status: 'success' });
             } else {
@@ -22,22 +38,14 @@ export default async function handler(req, res) {
         }
 
         // ============================================================
-        // السيناريو الثاني: فحص الأمان قبل تسجيل الحضور (الكمين)
+        // 5. الحماية من F12 (عند تسجيل الحضور فقط)
         // ============================================================
-        if (req.method === 'POST' && req.body.action === 'register') {
-            // هل يوجد بصمة وجه في البيانات؟
+        if (req.method === 'POST' && action === 'register') {
             const hasVector = req.body.vector && req.body.vector.length > 10;
-
-            // هل أرسل المستخدم كلمة سر المسؤول كإثبات؟ (في حالة التجاوز)
             const providedPass = req.body.admin_password;
             
-            // هل كلمة السر المرسلة مطابقة للأصلية؟
-            const isAdminProof = providedPass === ADMIN_PASS;
-
-            // ⛔ قاعدة الحظر الصارمة:
-            // لو مفيش بصمة وجه.. وكمان مفيش إثبات إنك مسؤول (كلمة السر)
-            // يبقى ده طالب بيحاول يخدع النظام عن طريق F12
-            if (!hasVector && !isAdminProof) {
+            // هل كلمة السر المرسلة مطابقة؟
+            if (!hasVector && providedPass !== ADMIN_PASS) {
                 return res.status(403).json({ 
                     result: 'error', 
                     message: '⛔ Security Alert: محاولة تلاعب مكشوفة! تم رفض الطلب.' 
@@ -46,21 +54,17 @@ export default async function handler(req, res) {
         }
 
         // ============================================================
-        // 3. إكمال الاتصال بجوجل شيت (لو الطلب سليم وعدى من الكمين)
+        // 6. إرسال الطلب للشيت المناسب
         // ============================================================
-        let targetUrl = SECRET_URL;
         let options = {
-            method: req.method, // نستخدم نفس نوع الطلب (GET أو POST)
+            method: req.method,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         };
 
         if (req.method === 'GET') {
-            // === حالة عرض السجل (Reports) ===
             const queryString = new URLSearchParams(req.query).toString();
-            targetUrl = `${SECRET_URL}?${queryString}`;
-            
+            targetUrl = `${targetUrl}?${queryString}`;
         } else if (req.method === 'POST') {
-            // === حالة تسجيل الحضور (Registration) ===
             const formData = new URLSearchParams();
             for (const key in req.body) {
                 formData.append(key, req.body[key]);
@@ -68,11 +72,9 @@ export default async function handler(req, res) {
             options.body = formData.toString();
         }
 
-        // تنفيذ الاتصال بجوجل شيت
         const response = await fetch(targetUrl, options);
         const data = await response.json();
         
-        // الرد بالنتيجة
         return res.status(200).json(data);
 
     } catch (error) {
