@@ -1,40 +1,41 @@
 export default async function handler(req, res) {
-    // 1. استحضار الروابط من خزنة Vercel
+    // 1. تعريف الثوابت
     const ATTENDANCE_SHEET = process.env.MY_GOOGLE_SHEET;   // شيت الحضور
     const IDENTITY_SHEET = process.env.MY_IDENTITY_SHEET;   // شيت الهوية
     const ADMIN_PASS = "RYADANUR1"; // كلمة سر المسؤول
 
-    // التأكد من أن الروابط موجودة
+    // ============================================================
+    // 🔥 التعديل الأهم: فحص كلمة السر فوراً (قبل فحص الروابط)
+    // ============================================================
+    // هذا يضمن أن الدخول يعمل حتى لو الروابط فيها مشكلة
+    if (req.method === 'POST' && req.body.action === 'login_admin') {
+        if (req.body.password === ADMIN_PASS) {
+            return res.status(200).json({ status: 'success' });
+        } else {
+            return res.status(200).json({ status: 'error', message: 'Wrong Password' });
+        }
+    }
+
+    // 2. الآن فقط نتأكد من وجود الروابط لباقي العمليات
     if (!ATTENDANCE_SHEET || !IDENTITY_SHEET) {
         return res.status(500).json({ error: 'Server Setup Error: Missing Sheets URLs' });
     }
 
     try {
-        // 2. معرفة نوع العملية المطلوبة (Action)
+        // 3. معرفة نوع العملية المطلوبة (Action)
         let action = req.body.action;
         if (req.method === 'GET') {
             action = req.query.action;
         }
 
-        // 3. تحديد الوجهة (Default: شيت الحضور)
-        let targetUrl = ATTENDANCE_SHEET;
+        // 4. توجيه الطلب للشيت المناسب (Smart Routing)
+        let targetUrl = ATTENDANCE_SHEET; // الافتراضي: شيت الحضور
 
-        // قائمة العمليات التي يجب أن تذهب لشيت الهوية
-        const identityActions = ['login_admin', 'getAlerts', 'register_identity'];
+        // قائمة العمليات التي تذهب لشيت الهوية (أزلنا login_admin لأنها عولجت بالأعلى)
+        const identityActions = ['getAlerts', 'register_identity'];
         
         if (identityActions.includes(action)) {
             targetUrl = IDENTITY_SHEET;
-        }
-
-        // ============================================================
-        // 4. معالجة خاصة لـ "دخول المسؤول" (للحماية الإضافية)
-        // ============================================================
-        if (req.method === 'POST' && action === 'login_admin') {
-            if (req.body.password === ADMIN_PASS) {
-                return res.status(200).json({ status: 'success' });
-            } else {
-                return res.status(200).json({ status: 'error', message: 'Wrong Password' });
-            }
         }
 
         // ============================================================
@@ -54,7 +55,7 @@ export default async function handler(req, res) {
         }
 
         // ============================================================
-        // 6. إرسال الطلب للشيت المناسب
+        // 6. إرسال الطلب لجوجل شيت
         // ============================================================
         let options = {
             method: req.method,
