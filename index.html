@@ -502,7 +502,7 @@
         <div class="modal-box">
             <i class="fa-solid fa-hourglass-end" style="font-size: 50px; color: #ef4444; margin-bottom: 15px; animation: pulse-red 2s infinite;"></i>
             <div class="modal-title" style="color: #ef4444;">انتهى الوقت</div>
-            <div class="modal-text" style="font-weight: bold; font-size: 15px; color: #1e293b;">
+            <div class="modal-text" style="font-weight: bold; font-size: 15px; color: #1e293b;" id="timeoutMessage">
                 في المرة القادمة سيتم حظرك
             </div>
             <button onclick="closeTimeoutModal()" class="modal-btn btn-confirm" style="background: #334155; margin-top:10px;">حسناً</button>
@@ -1048,14 +1048,13 @@
         const MASTER_REGISTRATION_LINK = "https://script.google.com/macros/s/AKfycbznfekFNnNWdJ6htdllsbPHztbL0tolOFH7V9f3KeC8L4fwCEyVYE1yM6JmyXFEv4hr/exec";
 
         const GROUP_SHEET_URLS = {};
-        // ملء الروابط تلقائياً
         for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = MASTER_REGISTRATION_LINK; }
         for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; }
 
         const CONFIG = {
             sheetApiUrl: MASTER_REGISTRATION_LINK, 
-            identitySheetUrl: "https://script.google.com/macros/s/AKfycbz4pXwNKmy_qh5XHDWipk6h-HRouUMV7NQH2pjyfv9kTdhKnV5oIaqa7PvAJmeOXcVX/exec",
-            adminPassword: "RYADANUR1",
+            identitySheetUrl: "https://script.google.com/macros/s/AKfycbwx09rtHtsefAcu-09Bn5boBsLKGpivHgFcpYcnwSQIaSLja-wRzq3PLgAHTCx2te2E/exec",
+            // تم حذف كلمة المرور من هنا للأمان (Server-Side Validation)
             gps: { 
                 targetLat: 30.385839819568105,  
                 targetLong: 30.488877976075997, 
@@ -1084,7 +1083,6 @@
             try { studentsDB = JSON.parse(savedDB); } catch(e) {}
         }
         
-        // جلب أسماء الطلاب في الخلفية
         fetch(CONFIG.sheetApiUrl).then(r => r.json()).then(d => { if(!d.error) { studentsDB = d; localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(d)); } }).catch(e => console.log("DB Fetch Error"));
 
         let defaultSubjects = {
@@ -1542,43 +1540,13 @@
             });
             if(filteredHalls.length === 0) { hallContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#94a3b8; font-size:12px;">لا توجد نتائج</div>'; }
         }
-        // ==========================================
-        //  الجزء الثاني: خوارزميات الأمان والمنطق
-        // ==========================================
-
-        // متغير لتخزين تاريخ القراءات لتحليلها (Anti-Spoofing)
-        let gpsReadings = [];
-
-        function calculateVariance(arr) {
-            if(!arr.length) return 0;
-            const mean = arr.reduce((a, b) => a + b) / arr.length;
-            // حساب التباين للفروقات الدقيقة جداً
-            return arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / arr.length;
-        }
 
         function startGPSWatcher() {
             if (navigator.geolocation) {
+                // استخدام enableHighAccuracy هنا أيضاً
                 geo_watch_id = navigator.geolocation.watchPosition(
-                    (position) => {
-                        userLat = position.coords.latitude;
-                        userLng = position.coords.longitude;
-                        
-                        // === خوارزمية تجميع البيانات لكشف التزييف ===
-                        // نقوم بتخزين آخر 20 قراءة لتحليل "الرعشة" الطبيعية في الإشارة
-                        gpsReadings.push({
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                            acc: position.coords.accuracy,
-                            spd: position.coords.speed,
-                            t: Date.now()
-                        });
-                        
-                        // الاحتفاظ بآخر 20 قراءة فقط
-                        if(gpsReadings.length > 20) gpsReadings.shift();
-                    },
-                    (error) => { console.log("GPS Error: ", error); },
-                    // تفعيل خيارات الدقة العالية لضمان قراءة حقيقية وعدم الاعتماد على الأبراج فقط
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                    (position) => { userLat = position.coords.latitude; userLng = position.coords.longitude; },
+                    (error) => { }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }
                 );
             }
         }
@@ -1610,68 +1578,41 @@
             updateUIForAttempts(); checkStoredAlerts(); 
         }
 
+        // --- Fake GPS Detection Logic ---
+        function detectFakeGPS(pos) {
+            // Fake GPS often returns implausibly high accuracy (e.g. 0, 1, or 2 meters exactly)
+            // Real GPS typically has accuracy > 3m even in best conditions.
+            if (pos.coords.accuracy < 2) return true;
+
+            // Fake GPS often has null or 0 altitude while claiming high accuracy
+            if (pos.coords.altitude === null && pos.coords.accuracy < 10) return true;
+            
+            return false;
+        }
+
         function checkLocationStrict(onSuccess) {
-            // إذا كان المستخدم مسؤول (Doctor Mode)، نتجاوز الفحص
-            if (sessionStorage.getItem(DOCTOR_MODE_KEY) === 'true') { onSuccess(); return; }
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => { 
+                        // First check for Fake GPS
+                        if (detectFakeGPS(pos)) {
+                            showError("🚫 تم اكتشاف موقع وهمي (Fake GPS). يرجى إغلاق أي برامج تلاعب بالموقع.", false);
+                            return;
+                        }
 
-            // 1. التأكد من وجود قراءات كافية للتحليل
-            if (!gpsReadings || gpsReadings.length < 3) {
-                // محاولة أخيرة لجلب الموقع الحالي إذا لم تكن هناك قراءات مسجلة
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => { 
-                            userLat = pos.coords.latitude; userLng = pos.coords.longitude; 
-                            // إضافة القراءة الحالية للسجل للتحليل المستقبلي
-                            gpsReadings.push({lat: userLat, lng: userLng, acc: pos.coords.accuracy, t: Date.now()});
-                            checkDistance(onSuccess); 
-                        },
-                        (err) => { document.getElementById('locationForceModal').style.display = 'flex'; },
-                        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-                    );
-                } else { document.getElementById('locationForceModal').style.display = 'flex'; }
-                return;
-            }
-
-            // === 2. خوارزمية كشف التزييف (Anti-Spoofing Algorithm) ===
-            
-            // أ) تحليل التباين (Variance Check)
-            // الـ GPS الحقيقي مستحيل أن يكون ثابتاً تماماً لعدة قراءات متتالية (يجب أن يكون هناك تغيير في الكسور العشرية الدقيقة)
-            // إذا كان التباين 0.0000000000000 فهذا يعني أن الإحداثيات "مجمدة" برمجياً.
-            
-            const lats = gpsReadings.map(r => r.lat);
-            const lngs = gpsReadings.map(r => r.lng);
-            
-            const latVar = calculateVariance(lats);
-            const lngVar = calculateVariance(lngs);
-            
-            // قيمة عتبة صغيرة جداً، الـ GPS الحقيقي دائماً أكبر منها ولو بقليل
-            const MIN_VARIANCE_THRESHOLD = 0.00000000000001; 
-
-            // إذا كان التباين صفر تماماً ولدينا أكثر من 5 قراءات، فهذا تزييف مؤكد
-            if (gpsReadings.length > 5 && latVar < MIN_VARIANCE_THRESHOLD && lngVar < MIN_VARIANCE_THRESHOLD) {
-                 showError("🚫 <b>تم اكتشاف موقع وهمي (Fake GPS)</b><br>يرجى إغلاق برامج تغيير الموقع والمحاولة مرة أخرى.", true);
-                 // تسجيل محاولة اختراق
-                 updateNotificationUI({risk_level: "WRONG_LOCATION", distance: 9999});
-                 return;
-            }
-
-            // ب) تحليل الدقة المفرطة (Too Perfect Accuracy)
-            // إذا كانت الدقة ثابتة تماماً (مثلاً 5 متر بالضبط) لعدة مرات، هذا مشكوك فيه
-            // لكن لن نستخدمها كعامل حظر وحيد لتجنب الخطأ، سنعتمد على التباين كعامل أساسي.
-
-            // إذا اجتاز الفحوصات الأمنية، نفحص المسافة
-            checkDistance(onSuccess);
+                        userLat = pos.coords.latitude; 
+                        userLng = pos.coords.longitude; 
+                        checkDistance(onSuccess); 
+                    },
+                    (err) => { document.getElementById('locationForceModal').style.display = 'flex'; },
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } // Force Hardware GPS
+                );
+            } else { document.getElementById('locationForceModal').style.display = 'flex'; }
         }
 
         function checkDistance(onSuccess) {
             let dist = getDistanceFromLatLonInKm(userLat, userLng, CONFIG.gps.targetLat, CONFIG.gps.targetLong);
-            // تحويل المسافة لأمتار للعرض
-            let distMeters = Math.round(dist * 1000);
-            
-            if (dist > CONFIG.gps.allowedDistanceKm) { 
-                showError(`🚫 أنت خارج نطاق الكلية.<br>المسافة الحالية: ${distMeters} متر.<br>المسموح: 5000 متر (5 كم).`, false); 
-                return; 
-            }
+            if (dist > CONFIG.gps.allowedDistanceKm) { showError("🚫 أنت خارج نطاق الكلية. يرجى التواجد في المكان الصحيح.", false); return; }
             onSuccess();
         }
 
@@ -1680,14 +1621,10 @@
             resetApplicationState();
             if (sessionStorage.getItem(DOCTOR_MODE_KEY) === 'true') { generateCodeAndShowDataEntry(); return; }
             switchScreen('screenLoading');
-            
-            // الانتظار قليلاً لجمع بيانات GPS كافية للتحليل (2 ثانية)
-            setTimeout(() => {
-                checkLocationStrict(() => { 
-                    switchScreen('screenReadyToStart'); 
-                    playSuccess();
-                });
-            }, 2000);
+            checkLocationStrict(() => { 
+                switchScreen('screenReadyToStart'); 
+                playSuccess();
+            });
         }
 
         function generateCodeAndShowDataEntry() {
@@ -1719,6 +1656,7 @@
                     let left = decrementAttempts(); 
                     updateUIForAttempts(); 
                     
+                    document.getElementById('timeoutMessage').innerText = `انتهى الوقت. انتبه: في المرة القادمة سيتم حظرك.`;
                     document.getElementById('timeoutModal').style.display = 'flex';
                     if(navigator.vibrate) navigator.vibrate(300);
                 }
@@ -1772,7 +1710,6 @@
             if (!attendanceData.uniID) { showToast('حدث خطأ: لم يتم تحديد الهوية', 3000, '#ef4444'); return; }
             const btn = document.getElementById('btnVerify'); const oldText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري تحديد الموقع...';
-            // إعادة الفحص الصارم للموقع قبل فتح الكاميرا
             checkLocationStrict(() => { btn.innerHTML = oldText; proceedToCamera(); });
         }
 
@@ -1898,13 +1835,12 @@
             const btn = document.getElementById('submitBtn');
             if(btn.disabled && btn.innerText.includes('جاري')) return;
             
-            // تحقق أخير من الموقع قبل الإرسال (تأكيد أمان إضافي)
-            checkLocationStrict(() => {
-                proceedWithSubmission(btn);
-            });
-        }
+            // Re-check for Fake GPS before final submission
+            if(!userLat || !userLng) {
+                checkLocationStrict(() => submitToGoogle());
+                return;
+            }
 
-        async function proceedWithSubmission(btn) {
             const originalText = "تأكيد الحضور <i class='fa-solid fa-paper-plane'></i>";
             const selectedSubject = document.getElementById('subjectSelect').value; 
             const selectedGroup = document.getElementById('groupSelect').value;
@@ -2138,13 +2074,59 @@
         async function stopCameraSafely() { if(html5QrCode && html5QrCode.isScanning) { try { await html5QrCode.stop(); } catch(e) {} } document.getElementById('qr-reader').style.display = 'none'; releaseWakeLock(); }
         function retryCamera() { document.getElementById('cameraErrorModal').style.display = 'none'; proceedToCamera(); } 
         async function startQrScanner() { playClick(); requestWakeLock(); await stopCameraSafely(); document.getElementById('startScanCard').style.display = 'none'; document.getElementById('qr-reader').style.display = 'block'; document.getElementById('qr-reader').innerHTML = '<div class="scanner-laser" style="display:block"></div>'; document.getElementById('submitBtn').disabled = true; document.getElementById('sessionPass').value = ''; html5QrCode = new Html5Qrcode("qr-reader"); try { await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (t) => { playBeep(); html5QrCode.stop().then(() => { document.getElementById('qr-reader').style.display = 'none'; document.getElementById('scanSuccessMsg').style.display = 'flex'; document.getElementById('sessionPass').value = t; checkAllConditions(); if(navigator.vibrate) navigator.vibrate([100,50,100]); releaseWakeLock(); }); }); } catch (err) { await stopCameraSafely(); document.getElementById('startScanCard').style.display = 'none'; document.getElementById('retryCamBtn').style.display = 'flex'; document.getElementById('cameraErrorModal').style.display = 'flex'; } }
-        function checkAdminPassword() { 
+        
+        // ===============================================
+        // Updated Function: Server-Side Password Check
+        // ===============================================
+        async function checkAdminPassword() { 
             playClick(); 
-            if (document.getElementById('adminPassword').value === CONFIG.adminPassword) { 
-                playSuccess(); const modal = document.getElementById('adminSuccessModal'); modal.style.display = 'flex';
-                setTimeout(() => { modal.style.display = 'none'; sessionStorage.setItem(DOCTOR_MODE_KEY, 'true'); updateUIForMode(); switchScreen('screenWelcome'); }, 2000);
-            } else { document.getElementById('adminAlert').innerText = "❌ خطأ"; document.getElementById('adminAlert').style.display = 'block'; document.getElementById('adminPassword').value = ''; } 
+            const pwd = document.getElementById('adminPassword').value;
+            const btn = document.querySelector('#screenAdminLogin .btn-main');
+            const alertBox = document.getElementById('adminAlert');
+            
+            if(!pwd) return;
+            
+            const oldText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري التحقق...';
+            btn.disabled = true;
+            alertBox.style.display = 'none';
+
+            try {
+                const response = await fetch(CONFIG.identitySheetUrl, { 
+                    method: 'POST', 
+                    mode: 'cors', 
+                    headers: {'Content-Type': 'text/plain'}, 
+                    body: JSON.stringify({ action: "login_admin", password: pwd }) 
+                });
+                
+                const result = await response.json();
+
+                if (result.status === "success") { 
+                    playSuccess(); 
+                    const modal = document.getElementById('adminSuccessModal'); 
+                    modal.style.display = 'flex';
+                    document.getElementById('adminPassword').value = '';
+                    setTimeout(() => { 
+                        modal.style.display = 'none'; 
+                        sessionStorage.setItem(DOCTOR_MODE_KEY, 'true'); 
+                        updateUIForMode(); 
+                        switchScreen('screenWelcome'); 
+                    }, 2000);
+                } else { 
+                    throw new Error("Wrong Password");
+                } 
+            } catch (e) {
+                console.error(e);
+                alertBox.innerText = "❌ كلمة المرور غير صحيحة"; 
+                alertBox.style.display = 'block'; 
+                document.getElementById('adminPassword').value = ''; 
+                if(navigator.vibrate) navigator.vibrate(300);
+            } finally {
+                btn.innerHTML = oldText;
+                btn.disabled = false;
+            }
         }
+
         function showError(msg, isPermanent = false) { if(countdownInterval) clearInterval(countdownInterval); document.getElementById('errorMsg').innerHTML = msg; const retryBtn = document.getElementById('retryBtn'); if(isPermanent) retryBtn.style.display = 'none'; else { retryBtn.style.display = 'inline-block'; retryBtn.onclick = function() { location.reload(); }; } switchScreen('screenError'); if(navigator.vibrate) navigator.vibrate(300); }
         function performLogout() { playClick(); sessionStorage.removeItem(DOCTOR_MODE_KEY); location.reload(); }
         function openLogoutModal() { playClick(); document.getElementById('customLogoutModal').style.display = 'flex'; }
@@ -2238,6 +2220,7 @@
                 const studentID = item.uniID || "---";
                 const timeStr = item.time || "--:--";
                 
+                // *** إضافة زر التحديد (Highlight) وزر الحذف (Delete) ***
                 html += `
                     <div class="student-detailed-card" id="card-${studentID}">
                         <div class="st-data-col" style="width: 100%;">
@@ -2292,6 +2275,7 @@
         }
         function closeModernConfirm() { playClick(); document.getElementById('modernConfirmModal').style.display = 'none'; pendingAction = null; }
 
+        // *** دالة الحذف الفعلية من السيرفر ***
         async function deleteEntry(id, subject, btn) {
             showModernConfirm("حذف نهائي", "سيتم حذف الطالب من السجل ومن السيرفر نهائياً. هل أنت متأكد؟", async function() {
                 const card = btn.closest('.student-detailed-card'); 
@@ -2305,7 +2289,7 @@
 
                     await fetch(MASTER_REGISTRATION_LINK, { 
                         method: 'POST', 
-                        mode: 'no-cors', 
+                        mode: 'no-cors', // هنا نستخدم no-cors للسرعة لأننا لا نحتاج رد معقد، الحذف سيتم
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
                         body: params.toString() 
                     });
@@ -2321,16 +2305,19 @@
             });
         }
 
+        // *** دالة التحديد (Highlight) الجديدة ***
         async function highlightEntry(id, subject, btn) {
             playClick();
             const card = btn.closest('.student-detailed-card');
             
+            // تغيير فوري للواجهة (UI Feedback)
             if (card.classList.contains('highlighted-red')) {
                 card.classList.remove('highlighted-red');
             } else {
                 card.classList.add('highlighted-red');
             }
 
+            // إرسال الطلب للسيرفر في الخلفية
             try {
                 const params = new URLSearchParams();
                 params.append("action", "highlightUser");
@@ -2349,6 +2336,7 @@
         async function clearAllReport() {
             showModernConfirm("تصفيه السجل", "سيتم مسح البيانات. هل أنت متأكد؟", async function() {
                  document.getElementById('subjectsContainer').innerHTML = '<div style="padding:20px; text-align:center;">جاري الحذف...</div>';
+                 // منطق الحذف الشامل
                  const params = new URLSearchParams();
                  params.append("action", "clearAll");
                  fetch(MASTER_REGISTRATION_LINK, { method: 'POST', mode: 'no-cors', body: params });
