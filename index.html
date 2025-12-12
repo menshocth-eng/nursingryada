@@ -1052,8 +1052,7 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = MASTER_REGISTRATION_LINK; 
 for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; }
         const CONFIG = {
             sheetApiUrl: MASTER_REGISTRATION_LINK, 
-// تم التوجيه للباك اند للحماية
-identitySheetUrl: MASTER_REGISTRATION_LINK,
+            identitySheetUrl: "/api/submit",
             // تم حذف كلمة المرور من هنا للأمان (Server-Side Validation)
             gps: { 
                 targetLat: 30.438423524130314,  
@@ -2367,6 +2366,7 @@ identitySheetUrl: MASTER_REGISTRATION_LINK,
     </script>
 </body>
 </html>
+
 
 
 
