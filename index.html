@@ -1050,14 +1050,18 @@ const MASTER_REGISTRATION_LINK = "/api/submit";
 const GROUP_SHEET_URLS = {};
 for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = MASTER_REGISTRATION_LINK; }
 for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; }
+
         const CONFIG = {
             sheetApiUrl: MASTER_REGISTRATION_LINK, 
-            identitySheetUrl: "/api/submit",
+            
+            // ✅ التعديل الأهم: توجيه الهوية لنفس رابط الباك اند
+            identitySheetUrl: MASTER_REGISTRATION_LINK, 
+            
             // تم حذف كلمة المرور من هنا للأمان (Server-Side Validation)
             gps: { 
                 targetLat: 30.438423524130314,  
                 targetLong: 30.836766585591185, 
-                allowedDistanceKm: 5       
+                allowedDistanceKm: 5        
             },
             modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
@@ -1203,6 +1207,7 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
             const btn = document.getElementById('notificationBtn');
             try {
                 const nocache = new Date().getTime();
+                // هنا نستخدم الرابط الموحد أيضاً
                 const response = await fetch(`${CONFIG.identitySheetUrl}?action=getAlerts&t=${nocache}`);
                 const data = await response.json();
                 
@@ -1228,13 +1233,10 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                         showTopToast("تم تحديث التنبيهات الأمنية");
                     }
                 }
-         } catch (e) {
-        // ده الكود الجديد اللي هيقولنا الحقيقة
-        console.error(e);
-        alertBox.innerText = "⚠️ خطأ في السيرفر: " + (e.message || "مشكلة غير معروفة");
-        alertBox.style.display = 'block'; 
-        document.getElementById('adminPassword').value = ''; 
-    }
+            } catch (e) {
+                console.error("Sync Error:", e);
+            }
+        }
 
         function showTopToast(msg) {
             const t = document.getElementById('topToast');
@@ -1805,7 +1807,8 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                                 publicKey: sessionKey
                             };
                             try {
-                                const response = await fetch(CONFIG.identitySheetUrl, { method: 'POST', mode: 'cors', headers: {'Content-Type': 'text/plain'}, body: JSON.stringify(payload) });
+                                // هنا نستخدم الرابط الموحد
+                                const response = await fetch(CONFIG.identitySheetUrl, { method: 'POST', mode: 'cors', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                                 const result = await response.json();
                                 updateNotificationUI(result);
                                 
@@ -1893,6 +1896,13 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
             formParams.append("gps_lng", userLng);
             formParams.append("deviceId", deviceId);
 
+            // === الحماية ضد F12 ===
+            // لو مفيش بصمة وجه (يعني تجاوز)، لازم نبعت كلمة سر مسؤول كإثبات
+            if (!attendanceData.vector) {
+                const adminPassProof = sessionStorage.getItem("CACHED_ADMIN_PASS") || "";
+                formParams.append("admin_password", adminPassProof);
+            }
+
             let targetUrl = GROUP_SHEET_URLS[selectedGroup];
             if (!targetUrl || targetUrl.includes("LINK_SHEET")) {
                 showToast("عذراً، لم يتم تفعيل رابط هذا الجروب بعد.", 3000, '#ef4444');
@@ -1921,19 +1931,25 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                     
                     let result = await response.json();
 
-                    if (result.result === "success") {
+                    if (result.status === "success" || result.result === "success") {
                         success = true;
                     } else if (result.result === "duplicate") {
                         success = true; 
                         showToast("مسجل مسبقاً", 3000, '#f59e0b');
-                    } else if (result.message === "Server Busy") {
+                    } else if (result.message && result.message.includes("Busy")) {
                         throw new Error("Server Busy");
+                    } else if (result.result === 'error') {
+                        // لو السيرفر رجع خطأ صريح (زي الباسورد غلط)
+                        throw new Error(result.message);
                     } else {
                         throw new Error("Unknown Error");
                     }
 
                 } catch (err) {
-                    console.log("فشل الاتصال، المحاولة القادمة... " + err);
+                    console.log("فشل الاتصال: " + err);
+                    if (attempt === maxRetries) {
+                         showToast("خطأ: " + err.message, 4000, '#ef4444');
+                    }
                 }
             }
 
@@ -1957,7 +1973,6 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
 
             } else {
                 btn.innerHTML = originalText; btn.disabled = false; 
-                showToast("السيرفر مشغول جداً، حاول مرة أخرى الآن.", 4000, '#ef4444');
             }
         }
 
@@ -2094,10 +2109,10 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
             alertBox.style.display = 'none';
 
             try {
+                // استخدام الرابط الموحد للباك اند
                 const response = await fetch(CONFIG.identitySheetUrl, { 
                     method: 'POST', 
-                    mode: 'cors', 
-                    headers: {'Content-Type': 'text/plain'}, 
+                    headers: {'Content-Type': 'application/json'}, 
                     body: JSON.stringify({ action: "login_admin", password: pwd }) 
                 });
                 
@@ -2105,6 +2120,10 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
 
                 if (result.status === "success") { 
                     playSuccess(); 
+                    
+                    // حفظ كلمة السر عشان نستخدمها كإثبات لو احتاجنا
+                    sessionStorage.setItem("CACHED_ADMIN_PASS", pwd);
+
                     const modal = document.getElementById('adminSuccessModal'); 
                     modal.style.display = 'flex';
                     document.getElementById('adminPassword').value = '';
@@ -2115,11 +2134,12 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                         switchScreen('screenWelcome'); 
                     }, 2000);
                 } else { 
-                    throw new Error("Wrong Password");
+                    throw new Error(result.message || "Wrong Password");
                 } 
             } catch (e) {
                 console.error(e);
-                alertBox.innerText = "❌ كلمة المرور غير صحيحة"; 
+                // إظهار السبب الحقيقي للخطأ
+                alertBox.innerText = "⚠️ خطأ: " + (e.message || "كلمة المرور غير صحيحة أو السيرفر لا يستجيب"); 
                 alertBox.style.display = 'block'; 
                 document.getElementById('adminPassword').value = ''; 
                 if(navigator.vibrate) navigator.vibrate(300);
@@ -2161,13 +2181,11 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
             </div>`;
 
             try {
-                const urls = [MASTER_REGISTRATION_LINK]; 
-                
-                const responses = await Promise.all(urls.map(url => fetch(`${url}?action=getReport&date=${d}`).then(res => res.json()).catch(e => [])));
-                
-                let allData = [].concat(...responses);
+                // استخدام الرابط الموحد للتقارير
+                const response = await fetch(`${MASTER_REGISTRATION_LINK}?action=getReport&date=${d}`);
+                const allData = await response.json();
 
-                if (!allData || allData.length === 0) {
+                if (!allData || allData.length === 0 || allData.error) {
                     container.innerHTML = `<div class="empty-state" style="margin-top:50px;">
                         <i class="fa-solid fa-folder-open" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i>
                         <br>لا توجد سجلات مسجلة بتاريخ اليوم (${d}).
@@ -2289,9 +2307,10 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                     params.append("id", id);
                     params.append("subject", subject);
 
+                    // استخدام الرابط الموحد
                     await fetch(MASTER_REGISTRATION_LINK, { 
                         method: 'POST', 
-                        mode: 'no-cors', // هنا نستخدم no-cors للسرعة لأننا لا نحتاج رد معقد، الحذف سيتم
+                        mode: 'no-cors', 
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
                         body: params.toString() 
                     });
@@ -2312,21 +2331,19 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
             playClick();
             const card = btn.closest('.student-detailed-card');
             
-            // تغيير فوري للواجهة (UI Feedback)
             if (card.classList.contains('highlighted-red')) {
                 card.classList.remove('highlighted-red');
             } else {
                 card.classList.add('highlighted-red');
             }
 
-            // إرسال الطلب للسيرفر في الخلفية
             try {
                 const params = new URLSearchParams();
                 params.append("action", "highlightUser");
                 params.append("id", id);
                 params.append("subject", subject);
 
-                fetch(MASTER_REGISTRATION_LINK, { 
+                await fetch(MASTER_REGISTRATION_LINK, { 
                     method: 'POST', 
                     mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
@@ -2338,7 +2355,6 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
         async function clearAllReport() {
             showModernConfirm("تصفيه السجل", "سيتم مسح البيانات. هل أنت متأكد؟", async function() {
                  document.getElementById('subjectsContainer').innerHTML = '<div style="padding:20px; text-align:center;">جاري الحذف...</div>';
-                 // منطق الحذف الشامل
                  const params = new URLSearchParams();
                  params.append("action", "clearAll");
                  fetch(MASTER_REGISTRATION_LINK, { method: 'POST', mode: 'no-cors', body: params });
@@ -2369,13 +2385,3 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
