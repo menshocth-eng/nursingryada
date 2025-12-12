@@ -1,12 +1,10 @@
 export default async function handler(req, res) {
-    // 1. كلمة السر (خط الدفاع الأول - السيرفر حافظها صم)
-    const ADMIN_PASS = "RYADANUR1";
-
     // ============================================================
-    // 🔥 فحص كلمة السر فوراً (قبل ما يشوف الروابط أو يكلم جوجل)
+    // 1. الأولوية القصوى: فحص كلمة السر فوراً
     // ============================================================
-    // الحركة دي بتخلي الدخول يشتغل حتى لو روابط جوجل فيها مشكلة
-    if (req.method === 'POST' && req.body.action === 'login_admin') {
+    // (الكود ده هيشتغل حتى لو الروابط مش موجودة)
+    if (req.method === 'POST' && req.body && req.body.action === 'login_admin') {
+        const ADMIN_PASS = "RYADANUR1"; // كلمة السر
         if (req.body.password === ADMIN_PASS) {
             return res.status(200).json({ status: 'success' });
         } else {
@@ -14,69 +12,53 @@ export default async function handler(req, res) {
         }
     }
 
-    // 2. استحضار الروابط من الخزنة لباقي العمليات
+    // ============================================================
+    // 2. دلوقتي بس نبدأ نشوف الروابط (عشان الحضور)
+    // ============================================================
     const ATTENDANCE_SHEET = process.env.MY_GOOGLE_SHEET;
     const IDENTITY_SHEET = process.env.MY_IDENTITY_SHEET;
+    const ADMIN_PASS = "RYADANUR1"; 
 
-    // لو الروابط مش موجودة، نطلع خطأ (بس خلاص الدخول فوق عدى بسلام)
     if (!ATTENDANCE_SHEET || !IDENTITY_SHEET) {
-        return res.status(500).json({ error: 'Server Config Error: Missing URLs' });
+        return res.status(500).json({ error: 'Server Setup Error: Missing URLs' });
     }
 
     try {
-        // تحديد نوع العملية
-        let action = req.body.action;
-        if (req.method === 'GET') action = req.query.action;
-
-        // 3. توجيه الطلب (Routing)
-        let targetUrl = ATTENDANCE_SHEET; // الافتراضي
+        let action = req.body.action || req.query.action;
+        let targetUrl = ATTENDANCE_SHEET;
         
-        // لو العملية تبع الهوية أو التنبيهات، نوديها لشيت الهوية
         if (['getAlerts', 'register_identity'].includes(action)) {
             targetUrl = IDENTITY_SHEET;
         }
 
-        // ============================================================
-        // 4. الحماية من F12 (عند تسجيل الحضور فقط)
-        // ============================================================
+        // الحماية من F12 عند تسجيل الحضور
         if (req.method === 'POST' && action === 'register') {
             const hasVector = req.body.vector && req.body.vector.length > 10;
             const providedPass = req.body.admin_password;
-            
-            // لو مفيش بصمة وجه، ولا فيه كلمة سر صحيحة -> اطرد الطالب
             if (!hasVector && providedPass !== ADMIN_PASS) {
-                return res.status(403).json({ 
-                    result: 'error', 
-                    message: '⛔ Security Alert: محاولة تلاعب مكشوفة! تم رفض الطلب.' 
-                });
+                return res.status(403).json({ result: 'error', message: '⛔ Security Alert!' });
             }
         }
 
-        // ============================================================
-        // 5. الاتصال بجوجل (المطبخ)
-        // ============================================================
+        // الاتصال بجوجل
         let options = {
             method: req.method,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         };
 
-        if (req.method === 'GET') {
-            const queryString = new URLSearchParams(req.query).toString();
-            targetUrl = `${targetUrl}?${queryString}`;
-        } else if (req.method === 'POST') {
+        if (req.method === 'POST') {
             const formData = new URLSearchParams();
-            for (const key in req.body) {
-                formData.append(key, req.body[key]);
-            }
+            for (const key in req.body) formData.append(key, req.body[key]);
             options.body = formData.toString();
+        } else {
+            targetUrl += `?${new URLSearchParams(req.query).toString()}`;
         }
 
         const response = await fetch(targetUrl, options);
         const data = await response.json();
-        
         return res.status(200).json(data);
 
     } catch (error) {
-        return res.status(500).json({ error: 'Connection Error', details: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
