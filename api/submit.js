@@ -1,46 +1,43 @@
 export default async function handler(req, res) {
-    // ============================================================
-    // 1. الأولوية القصوى: فحص كلمة السر فوراً
-    // ============================================================
-    // (الكود ده هيشتغل حتى لو الروابط مش موجودة)
-    if (req.method === 'POST' && req.body && req.body.action === 'login_admin') {
-        const ADMIN_PASS = "RYADANUR1"; // كلمة السر
-        if (req.body.password === ADMIN_PASS) {
-            return res.status(200).json({ status: 'success' });
-        } else {
-            return res.status(200).json({ status: 'error', message: 'Wrong Password' });
-        }
-    }
-
-    // ============================================================
-    // 2. دلوقتي بس نبدأ نشوف الروابط (عشان الحضور)
-    // ============================================================
-    const ATTENDANCE_SHEET = process.env.MY_GOOGLE_SHEET;
-    const IDENTITY_SHEET = process.env.MY_IDENTITY_SHEET;
-    const ADMIN_PASS = "RYADANUR1"; 
-
-    if (!ATTENDANCE_SHEET || !IDENTITY_SHEET) {
-        return res.status(500).json({ error: 'Server Setup Error: Missing URLs' });
-    }
+    // 1. تثبيت كلمة السر (بدون أي احتمالات)
+    const ADMIN_PASS = "RYADANUR1";
 
     try {
-        let action = req.body.action || req.query.action;
-        let targetUrl = ATTENDANCE_SHEET;
-        
-        if (['getAlerts', 'register_identity'].includes(action)) {
-            targetUrl = IDENTITY_SHEET;
+        // =========================================================
+        // اختبار النبض: هل السيرفر شغال؟
+        // =========================================================
+        if (req.method === 'GET' && req.query.action === 'ping') {
+            return res.status(200).json({ status: 'alive' });
         }
 
-        // الحماية من F12 عند تسجيل الحضور
-        if (req.method === 'POST' && action === 'register') {
-            const hasVector = req.body.vector && req.body.vector.length > 10;
-            const providedPass = req.body.admin_password;
-            if (!hasVector && providedPass !== ADMIN_PASS) {
-                return res.status(403).json({ result: 'error', message: '⛔ Security Alert!' });
+        // =========================================================
+        // 2. تسجيل دخول المسؤول (الأولوية القصوى)
+        // =========================================================
+        if (req.body && req.body.action === 'login_admin') {
+            if (req.body.password === ADMIN_PASS) {
+                return res.status(200).json({ status: 'success' });
+            } else {
+                // بنرجع 200 برضه بس مع رسالة خطأ عشان الفرونت اند ميعتبرهاش كارثة
+                return res.status(200).json({ status: 'error', message: 'Wrong Password' });
             }
         }
 
-        // الاتصال بجوجل
+        // =========================================================
+        // 3. باقي العمليات (تعتمد على Env Vars)
+        // =========================================================
+        const SHEETS_URL = process.env.MY_GOOGLE_SHEET;
+        const IDENTITY_URL = process.env.MY_IDENTITY_SHEET;
+
+        // لو المتغيرات مش موجودة، نبلغ المستخدم بدل ما نعمل Crash
+        if (!SHEETS_URL) throw new Error("MY_GOOGLE_SHEET is missing from Vercel!");
+        if (!IDENTITY_URL) throw new Error("MY_IDENTITY_SHEET is missing from Vercel!");
+
+        let targetUrl = SHEETS_URL;
+        if (req.body.action === 'getAlerts' || req.body.action === 'register_identity') {
+            targetUrl = IDENTITY_URL;
+        }
+
+        // تنفيذ الاتصال بجوجل
         let options = {
             method: req.method,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -55,10 +52,13 @@ export default async function handler(req, res) {
         }
 
         const response = await fetch(targetUrl, options);
+        if (!response.ok) throw new Error(`Google Sheets responded with ${response.status}`);
+        
         const data = await response.json();
         return res.status(200).json(data);
 
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        // لو حصل أي مصيبة، نرجع رسالة نفهم منها السبب
+        return res.status(500).json({ error: 'Server Crash', details: error.message });
     }
 }
