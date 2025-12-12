@@ -1228,10 +1228,13 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
                         showTopToast("تم تحديث التنبيهات الأمنية");
                     }
                 }
-            } catch (e) {
-                console.error("Sync Error:", e);
-            }
-        }
+         } catch (e) {
+        // ده الكود الجديد اللي هيقولنا الحقيقة
+        console.error(e);
+        alertBox.innerText = "⚠️ خطأ في السيرفر: " + (e.message || "مشكلة غير معروفة");
+        alertBox.style.display = 'block'; 
+        document.getElementById('adminPassword').value = ''; 
+    }
 
         function showTopToast(msg) {
             const t = document.getElementById('topToast');
@@ -2366,6 +2369,7 @@ for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; 
     </script>
 </body>
 </html>
+
 
 
 
