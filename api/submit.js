@@ -1,43 +1,36 @@
 export default async function handler(req, res) {
-    // 1. تثبيت كلمة السر (بدون أي احتمالات)
+    // 1. تثبيت كلمة السر
     const ADMIN_PASS = "RYADANUR1";
 
     try {
-        // =========================================================
-        // اختبار النبض: هل السيرفر شغال؟
-        // =========================================================
+        // فحص النبض
         if (req.method === 'GET' && req.query.action === 'ping') {
             return res.status(200).json({ status: 'alive' });
         }
 
-        // =========================================================
-        // 2. تسجيل دخول المسؤول (الأولوية القصوى)
-        // =========================================================
+        // تسجيل دخول المسؤول
         if (req.body && req.body.action === 'login_admin') {
             if (req.body.password === ADMIN_PASS) {
                 return res.status(200).json({ status: 'success' });
             } else {
-                // بنرجع 200 برضه بس مع رسالة خطأ عشان الفرونت اند ميعتبرهاش كارثة
                 return res.status(200).json({ status: 'error', message: 'Wrong Password' });
             }
         }
 
-        // =========================================================
-        // 3. باقي العمليات (تعتمد على Env Vars)
-        // =========================================================
+        // تجهيز الروابط
         const SHEETS_URL = process.env.MY_GOOGLE_SHEET;
         const IDENTITY_URL = process.env.MY_IDENTITY_SHEET;
 
-        // لو المتغيرات مش موجودة، نبلغ المستخدم بدل ما نعمل Crash
-        if (!SHEETS_URL) throw new Error("MY_GOOGLE_SHEET is missing from Vercel!");
-        if (!IDENTITY_URL) throw new Error("MY_IDENTITY_SHEET is missing from Vercel!");
+        if (!SHEETS_URL) throw new Error("MY_GOOGLE_SHEET is missing!");
+        if (!IDENTITY_URL) throw new Error("MY_IDENTITY_SHEET is missing!");
 
         let targetUrl = SHEETS_URL;
+        // توجيه طلبات الهوية
         if (req.body.action === 'getAlerts' || req.body.action === 'register_identity') {
             targetUrl = IDENTITY_URL;
         }
 
-        // تنفيذ الاتصال بجوجل
+        // إعداد الاتصال بجوجل
         let options = {
             method: req.method,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
@@ -51,14 +44,27 @@ export default async function handler(req, res) {
             targetUrl += `?${new URLSearchParams(req.query).toString()}`;
         }
 
+        // ============================================================
+        // 🔥 المنطقة المعدلة: كشف الخطأ الحقيقي
+        // ============================================================
         const response = await fetch(targetUrl, options);
-        if (!response.ok) throw new Error(`Google Sheets responded with ${response.status}`);
-        
-        const data = await response.json();
-        return res.status(200).json(data);
+        const rawText = await response.text(); // نقرأ الرد كنص أولاً
+
+        try {
+            // نحاول تحويله لـ JSON
+            const data = JSON.parse(rawText);
+            return res.status(200).json(data);
+        } catch (jsonError) {
+            // لو فشل التحويل، يبقى جوجل رد بـ HTML (خطأ)
+            console.error("Google returned non-JSON:", rawText);
+            // بنرجع الخطأ للموقع عشان تشوفه بعينك
+            return res.status(200).json({ 
+                result: "error", 
+                message: "Google Error: " + rawText.substring(0, 150).replace(/<[^>]*>?/gm, '') // بناخد ملخص الخطأ ونشيل التاغات
+            });
+        }
 
     } catch (error) {
-        // لو حصل أي مصيبة، نرجع رسالة نفهم منها السبب
         return res.status(500).json({ error: 'Server Crash', details: error.message });
     }
 }
