@@ -1043,31 +1043,13 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
 // ==========================================
-//  نظام الحماية وتشفير الروابط
+//  الرابط الموحد (Master Link)
 // ==========================================
-const _0x4e2a = ["aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy8=", "QUtmeWNiem5mZWtGTm5OV2RKNmh0ZGxsc2JQSHp0YkwwdG9sT0ZHN1Y5ZjNLZUM4TDRZd0NFeVZZRTF5TTZKbXlYRXY0aHI=", "L2V4ZWM="];
-
-function _get_secure_link() {
-    // تجميع الرابط المشفر عند الطلب فقط
-    return atob(_0x4e2a[0]) + atob(_0x4e2a[1]) + atob(_0x4e2a[2]);
-}
+const MASTER_REGISTRATION_LINK = "https://script.google.com/macros/s/AKfycbznfekFNnNWdJ6htdllsbPHztbL0tolOFH7V9f3KeC8L4fwCEyVYE1yM6JmyXFEv4hr/exec";
 
 const GROUP_SHEET_URLS = {};
-// يتم استدعاء الدالة لجلب الرابط بدلاً من المتغير الثابت
-for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = _get_secure_link(); }
-for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = _get_secure_link(); }
-
-// تحديث الكونفج لاستخدام الدالة
-const CONFIG = {
-    sheetApiUrl: _get_secure_link(), 
-    identitySheetUrl: "https://script.google.com/macros/s/AKfycbz4pXwNKmy_qh5XHDWipk6h-HRouUMV7NQH2pjyfv9kTdhKnV5oIaqa7PvAJmeOXcVX/exec", // يفضل تشفير هذا أيضاً بنفس الطريقة
-    gps: { 
-        targetLat: 30.438423524130314,  
-        targetLong: 30.836766585591185, 
-        allowedDistanceKm: 5       
-    },
-    modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
-};
+for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = MASTER_REGISTRATION_LINK; }
+for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; }
         const CONFIG = {
             sheetApiUrl: MASTER_REGISTRATION_LINK, 
             identitySheetUrl: "https://script.google.com/macros/s/AKfycbz4pXwNKmy_qh5XHDWipk6h-HRouUMV7NQH2pjyfv9kTdhKnV5oIaqa7PvAJmeOXcVX/exec",
@@ -2384,6 +2366,7 @@ const CONFIG = {
     </script>
 </body>
 </html>
+
 
 
 
