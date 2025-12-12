@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>نظام كشف الحضور - كلية التمريض (آمن)</title>
+    <title>نظام كشف الحضور - كلية التمريض</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0ea5e9">
@@ -1042,21 +1042,21 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script>
-        // ==========================================
-        //  إعدادات الاتصال (مؤمنة)
-        // ==========================================
+        // روابط الاتصال بالسيرفر
         const MASTER_REGISTRATION_LINK = "https://script.google.com/macros/s/AKfycbznfekFNnNWdJ6htdllsbPHztbL0tolOFH7V9f3KeC8L4fwCEyVYE1yM6JmyXFEv4hr/exec";
 
+        // إعداد روابط الجروبات (يمكن تخصيصها لاحقاً)
         const GROUP_SHEET_URLS = {};
         for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["1G"+i] = MASTER_REGISTRATION_LINK; }
         for(let i=1; i<=20; i++) { GROUP_SHEET_URLS["2G"+i] = MASTER_REGISTRATION_LINK; }
 
+        // إعدادات النظام الرئيسية
         const CONFIG = {
             sheetApiUrl: MASTER_REGISTRATION_LINK, 
-            // هذا الرابط هو المسؤول عن التحقق الأمني (كلمة المرور وبصمة الوجه)
+            // هذا الرابط هو المسؤول عن العمليات الأمنية (التحقق من الهوية + دخول المسؤول)
             identitySheetUrl: "https://script.google.com/macros/s/AKfycbzWSBhYTAvtvjjbPTa_q8au3gy0Bilwyo-hYfaWli8HhImlXi4xCO_dWu0Esad-tbVV/exec",
             
-            // ✅ تم حذف adminPassword من هنا نهائياً
+            // ✅ تم حذف كلمة المرور من هنا نهائياً لضمان الأمان
             
             gps: { 
                 targetLat: 30.385839819568105,  
@@ -1066,22 +1066,25 @@
             modelsUrl: 'https://justadudewhohacks.github.io/face-api.js/models'
         };
         
+        // ثوابت التخزين المحلي
         const LOCAL_STORAGE_DB_KEY = "offline_students_db_v2";
         const ALERT_STORAGE_KEY = "persistent_student_alerts_v2";
         const DEVICE_ID_KEY = "unique_device_id_v1"; 
 
+        // المتغيرات العامة
         let studentsDB = {};
         let wakeLock = null;
         let cachedReportData = [];
         let systemAlerts = [];
         let isOpeningMaps = false;
 
-        // تحميل البيانات المحفوظة محلياً
+        // تحميل التنبيهات المحفوظة
         try {
             const savedAlerts = localStorage.getItem(ALERT_STORAGE_KEY);
             if (savedAlerts) systemAlerts = JSON.parse(savedAlerts);
         } catch (e) {}
 
+        // تحميل قاعدة بيانات الطلاب
         const savedDB = localStorage.getItem(LOCAL_STORAGE_DB_KEY);
         if (savedDB) {
             try { studentsDB = JSON.parse(savedDB); } catch(e) {}
@@ -1090,15 +1093,18 @@
         // تحديث قاعدة البيانات في الخلفية
         fetch(CONFIG.sheetApiUrl).then(r => r.json()).then(d => { if(!d.error) { studentsDB = d; localStorage.setItem(LOCAL_STORAGE_DB_KEY, JSON.stringify(d)); } }).catch(e => console.log("DB Fetch Error"));
 
+        // بيانات المواد الدراسية
         let defaultSubjects = {
             "first_year": ["اساسيات تمريض 1 نظري", "اساسيات تمريض 1 عملي", "تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى", "اناتومى نظرى", "اناتومى عملى", "تقييم صحى نظرى", "تقييم صحى عملى", "مصطلحات طبية", "فسيولوجى", "تكنولوجيا المعلومات"],
             "second_year": ["تمريض بالغين 1 نظرى", "تمريض بالغين 1 عملى", "تمريض حالات حرجة 1 نظرى", "تمريض حالات حرجة 1 عملى", "امراض باطنة", "باثولوجى", "علم الأدوية", "الكتابة التقنية"]
         };
         let subjectsData = JSON.parse(localStorage.getItem('subjectsData_v4')) || defaultSubjects;
 
+        // بيانات القاعات الدراسية
         let defaultHalls = ["037", "038", "039", "019", "025", "123", "124", "127", "131", "132", "133", "134", "231", "335", "121", "118", "E334", "E335", "E336", "E337", "E344", "E345", "E346", "E347", "E240", "E241", "E242", "E245", "E231", "E230", "E243", "E233", "E222", "E234"];
         let hallsList = JSON.parse(localStorage.getItem('hallsList_v4')) || defaultHalls;
 
+        // مفاتيح الجلسة والتحكم
         const DOCTOR_MODE_KEY = "is_doctor_bypass_enabled";
         const DATA_ENTRY_TIMEOUT_SEC = 20;
         const SESSION_END_TIME_KEY = "data_entry_deadline_v2";
@@ -1110,6 +1116,7 @@
         const TODAY_DATE_KEY = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
         const BAN_KEY = "daily_ban_" + TODAY_DATE_KEY;
 
+        // متغيرات التشغيل
         let userIP = "Unknown";
         let geo_watch_id = null;
         let countdownInterval;
@@ -1126,6 +1133,7 @@
         const TIMER_DURATION_FACE = 3; 
         const TIMER_CIRCUMFERENCE_FACE = 282.7;
         
+        // منع النقر المتكرر
         let isProcessingClick = false;
         function safeClick(element, callback) {
             if (isProcessingClick) return;
@@ -1139,6 +1147,7 @@
             }, 600);
         }
 
+        // إنشاء معرف فريد للجهاز
         function getUniqueDeviceId() {
             let deviceId = localStorage.getItem(DEVICE_ID_KEY);
             if (!deviceId) {
@@ -1152,10 +1161,12 @@
             return 'KEY-' + Math.random().toString(36).substr(2, 12).toUpperCase();
         }
 
+        // دوال القوائم
         function openDataEntryMenu() { document.getElementById('dataEntryModal').style.display = 'flex'; }
         function openManageHalls() { renderHallsManage(); document.getElementById('manageHallsModal').style.display = 'flex'; }
         function openManageSubjects() { renderSubjectsManage(); document.getElementById('manageSubjectsModal').style.display = 'flex'; }
         
+        // إدارة القاعات
         function renderHallsManage() {
             const container = document.getElementById('hallsListManage');
             container.innerHTML = hallsList.map(h => `
@@ -1179,6 +1190,7 @@
             }
         }
 
+        // إدارة المواد
         function renderSubjectsManage() {
             const year = document.getElementById('manageYearSelect').value;
             const container = document.getElementById('subjectsListManage');
@@ -1206,13 +1218,14 @@
         }
 
         // ==========================================
-        // نظام التحديث الذكي لواجهة المستخدم (المصيدة الأمنية) 🛡️
+        //  نظام الحماية من التلاعب (Anti-Tamper UI) 🛡️
         // ==========================================
         function updateUIForMode() {
+            // محاولة جلب التوكن المخزن
             const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
             
             // 🔥 المصيدة: التحقق من "الشفرة السرية" وليس مجرد "true"
-            // الطالب لن يعرف هذه القيمة، وإذا كتب "true" سيفشل
+            // إذا حاول الطالب كتابة "true" يدوياً، سيفشل الشرط
             const isAdmin = (storedToken === "SECURE_ADMIN_ACCESS_V1");
 
             const badge = document.getElementById('adminBadge');
@@ -1226,19 +1239,34 @@
             const btnDataEntry = document.getElementById('btnDataEntry');
             
             if (isAdmin) {
-                badge.style.display = 'block'; loginBtn.style.display = 'none'; logoutBtn.style.display = 'flex'; reportBtn.classList.remove('locked'); reportBtn.classList.add('unlocked'); reportIcon.className = 'fa-solid fa-list-check sub-btn-icon'; 
-                document.getElementById('adminDeleteAlert').style.display = 'flex'; notifBtn.classList.remove('locked');
+                // تفعيل وضع المسؤول (للمستخدم الشرعي فقط)
+                badge.style.display = 'block'; 
+                loginBtn.style.display = 'none'; 
+                logoutBtn.style.display = 'flex'; 
+                reportBtn.classList.remove('locked'); 
+                reportBtn.classList.add('unlocked'); 
+                reportIcon.className = 'fa-solid fa-list-check sub-btn-icon'; 
+                document.getElementById('adminDeleteAlert').style.display = 'flex'; 
+                notifBtn.classList.remove('locked');
                 if(adminBypassContainer) adminBypassContainer.style.display = 'block';
                 if(btnDataEntry) btnDataEntry.style.display = 'flex';
                 syncGlobalAlerts();
             } else {
-                badge.style.display = 'none'; loginBtn.style.display = 'flex'; logoutBtn.style.display = 'none'; reportBtn.classList.remove('unlocked'); reportBtn.classList.add('locked'); reportIcon.className = 'fa-solid fa-lock sub-btn-icon'; adminFloating.style.display = 'none'; 
-                document.getElementById('adminDeleteAlert').style.display = 'none'; notifBtn.classList.add('locked');
+                // إغلاق وضع المسؤول
+                badge.style.display = 'none'; 
+                loginBtn.style.display = 'flex'; 
+                logoutBtn.style.display = 'none'; 
+                reportBtn.classList.remove('unlocked'); 
+                reportBtn.classList.add('locked'); 
+                reportIcon.className = 'fa-solid fa-lock sub-btn-icon'; 
+                adminFloating.style.display = 'none'; 
+                document.getElementById('adminDeleteAlert').style.display = 'none'; 
+                notifBtn.classList.add('locked');
                 if(adminBypassContainer) adminBypassContainer.style.display = 'block';
                 if(btnDataEntry) btnDataEntry.style.display = 'none';
                 
-                // تنظيف أي محاولات عبث
-                if(storedToken) {
+                // تنظيف أي محاولات عبث (إذا كانت القيمة موجودة ولكن خاطئة)
+                if (storedToken) {
                     sessionStorage.removeItem(DOCTOR_MODE_KEY);
                 }
             }
@@ -1246,7 +1274,7 @@
         }
 
         // ==========================================
-        // دالة التحقق من كلمة المرور (Server-Side) ✅
+        //  دالة التحقق من كلمة المرور (Server-Side) ✅
         // ==========================================
         async function checkAdminPassword() {
             playClick();
@@ -1256,11 +1284,12 @@
 
             if (!inputPass) return;
 
+            // 1. تغيير شكل الزر
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> جاري التحقق...';
             btn.disabled = true;
 
             try {
-                // استخدام رابط الهوية للتحقق الآمن
+                // 2. إرسال الباسورد للسيرفر للتحقق
                 const response = await fetch(CONFIG.identitySheetUrl, {
                     method: 'POST',
                     mode: 'cors', 
@@ -1273,6 +1302,7 @@
 
                 const result = await response.json();
 
+                // 3. التحقق من الرد
                 if (result.status === "success") {
                     playSuccess();
                     const modal = document.getElementById('adminSuccessModal');
@@ -1302,8 +1332,334 @@
             }
         }
 
-        // ... (باقي الدوال المساعدة والـ GPS كما هي) ...
+        async function syncGlobalAlerts() {
+            const btn = document.getElementById('notificationBtn');
+            try {
+                const nocache = new Date().getTime();
+                const response = await fetch(`${CONFIG.identitySheetUrl}?action=getAlerts&t=${nocache}`);
+                const data = await response.json();
+                
+                if (data && Array.isArray(data)) {
+                    const serverAlerts = data.map(item => {
+                        return {
+                            name: item.name,
+                            id: item.id,
+                            timestamp: item.timestamp,
+                            risk_level: item.risk_level,
+                            reason: item.reason,
+                            detail: item.detail,
+                            hall: item.hall,
+                            distance: item.distance,
+                            isRead: false
+                        };
+                    });
 
+                    if (serverAlerts.length > 0) {
+                        systemAlerts = serverAlerts;
+                        localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts));
+                        checkStoredAlerts(); 
+                        showTopToast("تم تحديث التنبيهات الأمنية");
+                    }
+                }
+            } catch (e) {
+                console.error("Sync Error:", e);
+            }
+        }
+
+        function showTopToast(msg) {
+            const t = document.getElementById('topToast');
+            t.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${msg}`;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        function checkStoredAlerts() {
+            const btn = document.getElementById('notificationBtn');
+            const container = document.getElementById('alertsListContainer');
+            // استخدام الطريقة الآمنة للتحقق
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            const isAdmin = (storedToken === "SECURE_ADMIN_ACCESS_V1");
+            
+            document.getElementById('adminDeleteAlert').style.display = isAdmin ? 'flex' : 'none';
+
+            const unreadCount = systemAlerts.filter(a => !a.isRead).length;
+            if (unreadCount > 0) btn.classList.add('has-alert'); else btn.classList.remove('has-alert');
+
+            if (systemAlerts.length > 0) {
+                let html = '';
+                systemAlerts.forEach((alert, index) => {
+                    const deleteBtn = isAdmin ? `<i class="fa-solid fa-trash-can" style="color:#ef4444; cursor:pointer; margin-left:10px;" onclick="deleteSingleAlert(${index}); event.stopPropagation();"></i>` : '';
+                    let badgeColor = "#f59e0b"; 
+                    if (alert.risk_level === "DEVICE_SHARING" || alert.risk_level === "FACE_SPOOF" || alert.risk_level === "LIMIT_EXCEEDED") {
+                        badgeColor = "#ef4444"; 
+                    }
+                    const itemClass = alert.isRead ? 'read-alert' : 'unread-alert';
+
+                    html += `
+                    <div class="${itemClass}" style="border-radius:12px; padding:10px; margin-bottom:8px; cursor:pointer; transition:0.3s;" onclick="toggleAlertDetails(${index})">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center;">
+                                ${deleteBtn}
+                                <div style="font-weight:bold; font-size:13px;">${alert.name}</div>
+                            </div>
+                            <div class="en-font" style="font-size:10px; color:#94a3b8;">${alert.timestamp.split(' ')[1] || alert.timestamp}</div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                            <div style="display:flex; flex-direction:column;">
+                                <div class="en-font" style="font-size:12px; color:#64748b;">${alert.id}</div>
+                                <div style="font-size:11px; color:#0f766e; font-weight:bold;">🏛️ قاعة: ${alert.hall}</div>
+                            </div>
+                            <div style="text-align:left;">
+                                <span style="color:${badgeColor}; display:block; font-size:11px; font-weight:bold;">⚠️ ${alert.reason}</span>
+                            </div>
+                        </div>
+                        <div id="alert-detail-${index}" style="display:none; border-top:1px dashed #e2e8f0; margin-top:8px; padding-top:8px; font-size:11px; color:#475569;">
+                            ${alert.detail}<br>
+                            التوقيت الكامل: <span class="en-font">${alert.timestamp}</span>
+                        </div>
+                    </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else { container.innerHTML = '<div class="empty-state" style="padding:15px; font-size:12px;">لا توجد تنبيهات مسجلة.</div>'; }
+        }
+
+        function updateNotificationUI(data) {
+            if (data.risk_level && data.risk_level !== "SAFE") {
+                let reasonText = "نشاط مشبوه";
+                let detailText = "يرجى المراجعة";
+                
+                if (data.risk_level === "DEVICE_SHARING") { reasonText = "مشاركة جهاز"; detailText = "الجهاز مستخدم لطالب آخر"; }
+                else if (data.risk_level === "FACE_SPOOF") { reasonText = "انتحال وجه"; detailText = "الوجه غير مطابق"; }
+                else if (data.risk_level === "WRONG_LOCATION") { reasonText = "خارج الموقع"; detailText = `يبعد مسافة ${Math.round(data.distance)} م`; }
+                else if (data.risk_level === "LIMIT_EXCEEDED") { reasonText = "تجاوز الحد"; detailText = "أكثر من 3 محاولات"; }
+
+                const now = new Date();
+                const newAlert = {
+                    name: attendanceData.name || 'مجهول',
+                    id: attendanceData.uniID || '---',
+                    timestamp: now.toLocaleTimeString('en-US'),
+                    risk_level: data.risk_level,
+                    reason: reasonText,
+                    detail: detailText,
+                    hall: document.getElementById('hallSelect').value || 'غير محدد',
+                    isRead: false
+                };
+                
+                systemAlerts.unshift(newAlert);
+                localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts));
+                checkStoredAlerts();
+            }
+        }
+
+        function toggleAlertDetails(index) {
+            if (!systemAlerts[index].isRead) {
+                systemAlerts[index].isRead = true; localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts)); checkStoredAlerts();
+            }
+            const el = document.getElementById(`alert-detail-${index}`);
+            if(el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function deleteSingleAlert(index) {
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            if (storedToken === "SECURE_ADMIN_ACCESS_V1") {
+                systemAlerts.splice(index, 1); localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(systemAlerts)); checkStoredAlerts();
+            }
+        }
+
+        function openDeleteAlertsConfirm() {
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            if (storedToken === "SECURE_ADMIN_ACCESS_V1") {
+                document.getElementById('deleteAlertsConfirmModal').style.display = 'flex';
+            }
+        }
+        function closeDeleteAlertsConfirm() {
+            document.getElementById('deleteAlertsConfirmModal').style.display = 'none';
+        }
+        function confirmClearNotifications() {
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            if (storedToken === "SECURE_ADMIN_ACCESS_V1") {
+                systemAlerts = []; 
+                localStorage.removeItem(ALERT_STORAGE_KEY); 
+                checkStoredAlerts(); 
+                closeDeleteAlertsConfirm();
+                closeIdentityAlert(); 
+            }
+        }
+        
+        function filterAlerts() {
+            const input = document.getElementById('alertSearchInput'); const filter = input.value.toUpperCase();
+            const container = document.getElementById('alertsListContainer'); const items = container.querySelectorAll('div[onclick^="toggleAlertDetails"]');
+            items.forEach(item => { const text = item.innerText || item.textContent; if (text.toUpperCase().indexOf(filter) > -1) item.style.display = ""; else item.style.display = "none"; });
+        }
+
+        function showNotificationModal() {
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            const isAdmin = (storedToken === "SECURE_ADMIN_ACCESS_V1");
+            if (!isAdmin) {
+                const btn = document.getElementById('notificationBtn'); btn.classList.add('shake-lock'); if(navigator.vibrate) navigator.vibrate(100); return;
+            }
+            checkStoredAlerts(); document.getElementById('identityAlertModal').style.display = 'flex';
+        }
+
+        function closeIdentityAlert() { document.getElementById('identityAlertModal').style.display = 'none'; }
+        
+        function filterStudents() {
+            const input = document.getElementById('studentSearchInput'); const filter = input.value.toUpperCase();
+            const container = document.getElementById('studentsContainer'); const cards = container.getElementsByClassName('student-detailed-card');
+            for (let i = 0; i < cards.length; i++) {
+                const textValue = cards[i].textContent || cards[i].innerText;
+                if (textValue.toUpperCase().indexOf(filter) > -1) cards[i].style.display = ""; else cards[i].style.display = "none";
+            }
+        }
+
+        function openExamModal() { playClick(); document.getElementById('examModal').style.display = 'flex'; }
+        function closeExamModal() { playClick(); document.getElementById('examModal').style.display = 'none'; }
+        function handleReportClick() { const btn = document.getElementById('btnViewReport'); if (btn.classList.contains('locked')) { if(navigator.vibrate) navigator.vibrate(50); } else { safeClick(btn, openReportModal); } }
+
+        function resetApplicationState() {
+            attendanceData = {}; attendanceData.isVerified = false; 
+            sessionStorage.removeItem(TEMP_NAME_KEY); sessionStorage.removeItem(TEMP_ID_KEY); sessionStorage.removeItem(TEMP_CODE_KEY); sessionStorage.removeItem(SESSION_END_TIME_KEY);
+            document.getElementById('uniID').value = ''; document.getElementById('attendanceCode').value = ''; document.getElementById('sessionPass').value = '';
+            
+            const yearWrapper = document.getElementById('yearSelectWrapper');
+            yearWrapper.querySelector('.trigger-text').textContent = '-- اختر الفرقة --'; yearWrapper.classList.remove('open');
+            yearWrapper.querySelectorAll('.custom-option').forEach(o => o.classList.remove('selected')); document.getElementById('yearSelect').value = '';
+            
+            const groupWrapper = document.getElementById('groupSelectWrapper');
+            groupWrapper.querySelector('.trigger-text').textContent = '-- اختر الفرقة أولاً --'; groupWrapper.classList.add('disabled'); groupWrapper.classList.remove('open');
+            document.getElementById('groupOptionsContainer').innerHTML = ''; document.getElementById('groupSelect').innerHTML = '<option value="" disabled selected>-- اختر الفرقة أولاً --</option>';
+
+            const subjectWrapper = document.getElementById('subjectSelectWrapper');
+            subjectWrapper.querySelector('.trigger-text').textContent = '-- اختر الفرقة أولاً --'; subjectWrapper.classList.add('disabled'); subjectWrapper.classList.remove('open');
+            document.getElementById('subjectOptionsContainer').innerHTML = ''; document.getElementById('subjectSelect').innerHTML = '<option value="" disabled selected>-- اختر الفرقة أولاً --</option>';
+            
+            const hallWrapper = document.getElementById('hallSelectWrapper');
+            hallWrapper.querySelector('.trigger-text').textContent = '-- اختر المدرج --'; hallWrapper.classList.remove('open');
+            hallWrapper.querySelectorAll('.custom-option').forEach(o => o.classList.remove('selected')); document.getElementById('hallSelect').value = '';
+            
+            const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.style.opacity = "0.6"; btn.style.cursor = "not-allowed"; btn.innerHTML = 'تأكيد الحضور <i class="fa-solid fa-paper-plane"></i>';
+            document.getElementById('scanNameDisplay').innerText = '--'; document.getElementById('scanIDDisplay').innerText = '--';
+            const verifyBtn = document.getElementById('btnVerify');
+            if(verifyBtn) { verifyBtn.innerHTML = '<i class="fa-solid fa-fingerprint"></i> التحقق من الهوية'; verifyBtn.style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)'; verifyBtn.style.display = 'flex'; verifyBtn.classList.remove('disabled'); }
+            const bypassCheck = document.getElementById('bypassCheckbox'); if(bypassCheck) bypassCheck.checked = false;
+            checkStoredAlerts(); 
+        }
+
+        fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip).catch(e => userIP = "Hidden IP");
+        function playClick() { document.getElementById('clickSound').play().catch(e=>{}); if(navigator.vibrate) navigator.vibrate(10); }
+        function playSuccess() { document.getElementById('successSound').play().catch(e=>{}); if(navigator.vibrate) navigator.vibrate([50, 50, 50]); }
+        function playBeep() { document.getElementById('beepSound').play().catch(e=>{}); }
+        function convertArabicToEnglish(s) { return s.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }
+        async function requestWakeLock() { try { if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {} }
+        function releaseWakeLock() { if (wakeLock !== null) { wakeLock.release().then(() => { wakeLock = null; }); } }
+        
+        function getAttemptsLeft() { 
+            return 999; 
+        }
+        function decrementAttempts() { 
+            return 999; 
+        }
+        function updateUIForAttempts() { 
+            const container = document.getElementById('attemptsHeartsContainer');
+            if(container) container.innerHTML = '';
+        }
+
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function () {
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            if (processIsActive && storedToken !== 'SECURE_ADMIN_ACCESS_V1') { 
+                checkBanStatus();
+                window.history.pushState(null, null, window.location.href); 
+            } else if (storedToken === 'SECURE_ADMIN_ACCESS_V1') { 
+                goBackToWelcome(); 
+            }
+        };
+        
+        function handleStrictPenalty() {}
+
+        window.addEventListener('beforeunload', (event) => {
+             handleStrictPenalty();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                if (isOpeningMaps) { return; }
+                const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+                if (processIsActive && storedToken !== 'SECURE_ADMIN_ACCESS_V1') { 
+                    location.reload(); 
+                }
+                releaseWakeLock();
+            } else { 
+                if (isOpeningMaps) { isOpeningMaps = false; }
+                if(processIsActive) requestWakeLock(); 
+            }
+        });
+
+        function checkBanStatus() { return false; }
+
+        function updateHeaderState(screenId) {
+            const wrapper = document.getElementById('heroIconWrapper');
+            const icon = document.getElementById('statusIcon');
+            wrapper.classList.remove('show-icon');
+            if (screenId !== 'screenWelcome') {
+                wrapper.classList.add('show-icon');
+                if (screenId === 'screenLoading') { icon.className = "fa-solid fa-satellite-dish hero-icon fa-spin"; icon.style.color = "var(--primary)"; }
+                else if (screenId === 'screenReadyToStart') { icon.className = "fa-solid fa-map-location-dot hero-icon"; icon.style.color = "#10b981"; icon.style.animation = "none"; }
+                else if (screenId === 'screenDataEntry') { icon.className = "fa-solid fa-user-pen hero-icon"; icon.style.color = "var(--primary)"; icon.style.animation = "none"; }
+                else if (screenId === 'screenScanQR') { icon.className = "fa-solid fa-qrcode hero-icon"; icon.style.color = "var(--primary)"; icon.style.animation = "none"; }
+                else if (screenId === 'screenFaceCheck') { 
+                    icon.className = "fa-solid fa-id-card-clip hero-icon"; 
+                    icon.style.color = "var(--primary)"; icon.style.animation = "none"; 
+                }
+                else if (screenId === 'screenSuccess') { icon.className = "fa-solid fa-check hero-icon"; icon.style.color = "#10b981"; icon.style.animation = "none"; }
+                else if (screenId === 'screenError') { icon.className = "fa-solid fa-triangle-exclamation hero-icon"; icon.style.color = "#ef4444"; icon.style.animation = "none"; }
+                else if (screenId === 'screenAdminLogin') { icon.className = "fa-solid fa-lock hero-icon"; icon.style.color = "var(--primary-dark)"; icon.style.animation = "none"; }
+            }
+        }
+
+        function switchScreen(id) {
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
+            const allSections = document.querySelectorAll('.section');
+            const nextScreen = document.getElementById(id);
+            allSections.forEach(el => { if (el.classList.contains('active')) el.classList.remove('active'); });
+            nextScreen.classList.add('active');
+            updateHeaderState(id);
+            updateUIForAttempts(); 
+            
+            const adminBack = document.getElementById('adminFloatingBack');
+            const storedToken = sessionStorage.getItem(DOCTOR_MODE_KEY);
+            const isAdmin = (storedToken === "SECURE_ADMIN_ACCESS_V1");
+            
+            if (isAdmin && id !== 'screenWelcome' && id !== 'screenAdminLogin') { adminBack.style.display = 'flex'; } else { adminBack.style.display = 'none'; }
+            if (!isAdmin && (id === 'screenDataEntry' || id === 'screenScanQR' || id === 'screenFaceCheck' || id === 'screenLoading')) { processIsActive = true; requestWakeLock(); } else { processIsActive = false; releaseWakeLock(); }
+        }
+
+        function openMapsToRefreshGPS() {
+            isOpeningMaps = true; 
+            const lat = CONFIG.gps.targetLat;
+            const lng = CONFIG.gps.targetLong;
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            window.open(mapsUrl, '_blank');
+        }
+
+        window.onload = function() {
+            initGlobalGuard(); updateUIForMode(); setupCustomSelects();
+            checkStoredAlerts(); 
+            startGPSWatcher();
+            renderHallOptions(); 
+            
+            document.getElementById('hallSearchInput').addEventListener('input', function(e) { renderHallOptions(e.target.value); });
+            setInterval(() => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', {hour12: true, hour:'2-digit', minute:'2-digit'});
+                const dateStr = now.toLocaleDateString('en-GB'); 
+                const timeEl = document.getElementById('currentTime'); const dateEl = document.getElementById('currentDate');
+                if(timeEl) timeEl.innerText = timeStr; if(dateEl) dateEl.innerText = dateStr;
+            }, 1000);
+            document.getElementById('submitBtn').addEventListener('click', function(e) { e.preventDefault(); submitToGoogle(); });
+        };
+        
         function renderHallOptions(filter = "") {
             const hallContainer = document.getElementById('hallOptionsContainer');
             const hallSelect = document.getElementById('hallSelect');
@@ -1328,9 +1684,9 @@
             if(filteredHalls.length === 0) { hallContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#94a3b8; font-size:12px;">لا توجد نتائج</div>'; }
         }
 
-        // ... (دوال GPS و Fake GPS كما هي) ...
         function startGPSWatcher() {
             if (navigator.geolocation) {
+                // استخدام enableHighAccuracy هنا أيضاً
                 geo_watch_id = navigator.geolocation.watchPosition(
                     (position) => { userLat = position.coords.latitude; userLng = position.coords.longitude; },
                     (error) => { }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 20000 }
@@ -1339,8 +1695,13 @@
         }
 
         function detectFakeGPS(pos) {
+            // Fake GPS often returns implausibly high accuracy (e.g. 0, 1, or 2 meters exactly)
+            // Real GPS typically has accuracy > 3m even in best conditions.
             if (pos.coords.accuracy < 2) return true;
+
+            // Fake GPS often has null or 0 altitude while claiming high accuracy
             if (pos.coords.altitude === null && pos.coords.accuracy < 10) return true;
+            
             return false;
         }
 
@@ -1348,16 +1709,18 @@
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => { 
+                        // First check for Fake GPS
                         if (detectFakeGPS(pos)) {
                             showError("🚫 تم اكتشاف موقع وهمي (Fake GPS). يرجى إغلاق أي برامج تلاعب بالموقع.", false);
                             return;
                         }
+
                         userLat = pos.coords.latitude; 
                         userLng = pos.coords.longitude; 
                         checkDistance(onSuccess); 
                     },
                     (err) => { document.getElementById('locationForceModal').style.display = 'flex'; },
-                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 } // Force Hardware GPS
                 );
             } else { document.getElementById('locationForceModal').style.display = 'flex'; }
         }
@@ -1368,7 +1731,6 @@
             onSuccess();
         }
 
-        // ... (دوال Start Process, Countdown, HandleID كما هي) ...
         async function startProcess(skip = false) {
             playClick();
             resetApplicationState();
@@ -1383,6 +1745,7 @@
         function generateCodeAndShowDataEntry() {
             playClick();
             if (checkBanStatus()) return; 
+            
             attendanceData = {};
             let code = (Math.floor(142 + Math.random() * 1280) * 7); if (code < 1000) code += 7000;
             attendanceData.code = code.toString(); document.getElementById('attendanceCode').value = code; sessionStorage.setItem(TEMP_CODE_KEY, code.toString());
@@ -1404,7 +1767,10 @@
                     clearInterval(countdownInterval); 
                     if (sessionStorage.getItem(DOCTOR_MODE_KEY) === 'SECURE_ADMIN_ACCESS_V1') { text.innerText = "0"; return; }
                     document.getElementById('nextStepBtn').disabled = true; hideConnectionLostModal(); processIsActive = false; releaseWakeLock();
-                    let left = decrementAttempts(); updateUIForAttempts(); 
+                    
+                    let left = decrementAttempts(); 
+                    updateUIForAttempts(); 
+                    
                     document.getElementById('timeoutMessage').innerText = `انتهى الوقت. انتبه: في المرة القادمة سيتم حظرك.`;
                     document.getElementById('timeoutModal').style.display = 'flex';
                     if(navigator.vibrate) navigator.vibrate(300);
@@ -1584,6 +1950,7 @@
             const btn = document.getElementById('submitBtn');
             if(btn.disabled && btn.innerText.includes('جاري')) return;
             
+            // Re-check for Fake GPS before final submission
             if(!userLat || !userLng) {
                 checkLocationStrict(() => submitToGoogle());
                 return;
